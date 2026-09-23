@@ -35,6 +35,7 @@ const cors    = require('cors');
 const sessionsRouter  = require('./routes/sessions.routes');
 const checkinRouter   = require('./routes/checkin.routes');
 const dashboardRouter = require('./routes/dashboard.routes');
+const authRouter      = require('./routes/auth.routes');
 
 // Import middleware
 const requestLogger = require('./middleware/requestLogger');
@@ -83,6 +84,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use('/api/sessions',  sessionsRouter);
 app.use('/api/checkin',   checkinRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/auth',      authRouter);   // Google Sign-In authentication
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 // A simple endpoint for load balancers and uptime monitors.

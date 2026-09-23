@@ -23,16 +23,27 @@
 -- =============================================================================
 -- TABLE: users
 -- =============================================================================
+-- Authentication is handled exclusively by Google Sign-In.
+-- No passwords are stored. The google_id column holds the stable subject
+-- identifier ("sub") from a verified Google ID token. This is Google's
+-- permanent, unique, never-reused identifier for a Google account — more
+-- reliable than email, which users can change.
+-- =============================================================================
 CREATE TABLE IF NOT EXISTS users (
-    id            BIGSERIAL    PRIMARY KEY,
-    name          VARCHAR(150) NOT NULL,
-    email         VARCHAR(255) NOT NULL UNIQUE,
-    password_hash TEXT,
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    id         BIGSERIAL    PRIMARY KEY,
+    name       VARCHAR(150) NOT NULL,
+    email      VARCHAR(255) NOT NULL UNIQUE,
+
+    -- google_id: the "sub" claim from a verified Google ID token.
+    -- UNIQUE ensures one user row per Google account.
+    -- NOT NULL because every user in this system authenticates via Google.
+    google_id  VARCHAR(255) NOT NULL UNIQUE,
+
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-COMMENT ON TABLE  users               IS 'Application user accounts';
-COMMENT ON COLUMN users.password_hash IS 'bcrypt/argon2 hash — never store plaintext';
+COMMENT ON TABLE  users           IS 'Application user accounts — Google Sign-In only, no passwords stored';
+COMMENT ON COLUMN users.google_id IS 'Stable Google subject ID ("sub" claim from verified ID token)';
 
 
 -- =============================================================================

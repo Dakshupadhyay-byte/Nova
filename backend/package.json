@@ -1,19 +1,19 @@
 {
-  "name": "backend",
   "name": "nova-async-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
   "description": "Nova Async — Node.js + PostgreSQL REST API backend",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
     "start": "node server.js",
     "dev": "nodemon --watch src --watch server.js server.js",
     "test": "echo \"No tests configured yet\" && exit 0"
   },
-  "keywords": [],
-  "keywords": ["node", "express", "postgresql", "rest-api"],
+  "keywords": [
+    "node",
+    "express",
+    "postgresql",
+    "rest-api"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
@@ -21,6 +21,7 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.3",
     "express": "^5.2.1",
+    "google-auth-library": "^11.1.0",
     "pg": "^8.23.0"
   },
   "devDependencies": {

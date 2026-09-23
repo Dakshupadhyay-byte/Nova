@@ -1,24 +1,25 @@
 # ─── Dependencies ───────────────────────────────────────────────────────────
-# Never commit node_modules — it's reproducible via `npm install` and massive.
 node_modules/
 
-# ─── Environment variables ───────────────────────────────────────────────────
-# .env holds secrets (DB passwords, API keys). NEVER commit it.
-# Use .env.example to document what variables are needed without real values.
+# ─── Environment variables ─────────────────────────────────────────────────
 .env
+.env.local
+.env.*.local
 
-# ─── Logs ───────────────────────────────────────────────────────────────────
+# Keep .env.example tracked
+!.env.example
+
+# ─── Logs ──────────────────────────────────────────────────────────────────
 logs/
 *.log
 npm-debug.log*
 
-# ─── OS / Editor artifacts ──────────────────────────────────────────────────
+# ─── OS / Editor artifacts ─────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
 
-# ─── Build output ───────────────────────────────────────────────────────────
+# ─── Build output ──────────────────────────────────────────────────────────
 dist/
 build/
-
