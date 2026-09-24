@@ -1,0 +1,6 @@
+{
+  "name": "NOVA Bio-Harmonic | Focus & Wellness Telemetry",
+  "description": "Bio-harmonic cognitive load balancer, circadian rhythm telemetry, and deep focus flow management engineered for high-agency performance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
