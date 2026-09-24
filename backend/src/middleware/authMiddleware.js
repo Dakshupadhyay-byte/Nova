@@ -1,151 +1,104 @@
 // =============================================================================
-// src/middleware/authMiddleware.js — Google ID Token Verification Middleware
-// =============================================================================
-//
-// PURPOSE
-// ────────
-// This middleware protects routes that require an authenticated user.
-// It re-verifies the Google ID token that the client includes in the
-// Authorization header on every protected request.
-//
-// WHY RE-VERIFY ON EVERY REQUEST?
-// ─────────────────────────────────
-// Because we issue no application-side JWT, the Google ID token IS the
-// credential. Re-verifying it on each protected request means:
-//   • We never have to manage our own token revocation
-//   • A revoked/expired Google session is automatically rejected
-//   • google-auth-library caches Google's public keys locally, so
-//     verification is fast (no network round-trip on every request once
-//     the keys are cached)
-//
-// USAGE IN A FUTURE ROUTE
-// ─────────────────────────
-//   const authMiddleware = require('../middleware/authMiddleware');
-//
-//   // Protect a single route:
-//   router.get('/protected', authMiddleware, someController);
-//
-//   // Protect all routes in a router:
-//   router.use(authMiddleware);
-//
-// CURRENT SCOPE
-// ──────────────
-// This middleware is NOT attached to any existing route in this task.
-// dashboard, checkin, and sessions routes remain publicly accessible.
-// Attaching authMiddleware to those routes is a future step.
-//
-// EXPECTED HEADER FORMAT
-// ───────────────────────
-//   Authorization: Bearer <Google ID token>
-//
-// The token is the same Google credential string that was sent to
-// POST /api/auth/google.
+// src/middleware/authMiddleware.js — Firebase Admin ID Token Verification Middleware
 // =============================================================================
 
 'use strict';
 
-const { OAuth2Client } = require('google-auth-library');
-
-// Re-use a single OAuth2Client instance for the same reason as in the controller.
-// Note: this is a separate instance from the one in auth.controller.js.
-// Each file maintains its own, which is fine — OAuth2Client is stateless
-// with respect to the client ID configuration.
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const { verifyFirebaseToken } = require('../config/firebaseAdmin');
+const db = require('../config/db');
 
 /**
- * Express middleware that verifies a Google ID token from the Authorization header.
+ * Express middleware that verifies a Firebase ID token from the Authorization header,
+ * resolves/creates the corresponding PostgreSQL database user, and attaches it to req.user.
  *
- * On success: attaches the verified Google payload to req.user and calls next().
- * On failure: returns 401 without calling next().
+ * Header: Authorization: Bearer <Firebase_ID_Token>
  *
- * req.user shape after successful verification:
+ * Attached req.user shape:
  *   {
- *     googleId: string,  // Google's stable "sub" identifier
- *     email:    string,
- *     name:     string,
+ *     id: number,          // PostgreSQL primary key BIGINT id
+ *     firebaseUid: string, // Firebase permanent UID
+ *     email: string,
+ *     name: string
  *   }
  *
  * @type {import('express').RequestHandler}
  */
 const authMiddleware = async (req, res, next) => {
   try {
-    // ── 1. Read the Authorization header ──────────────────────────────────────
+    // 1. Read Authorization header
     const authHeader = req.headers['authorization'];
-
     if (!authHeader) {
       return res.status(401).json({
         success: false,
         data: null,
         error: {
-          code:    'MISSING_AUTH_HEADER',
+          code: 'MISSING_AUTH_HEADER',
           message: 'Authorization header is required.',
         },
       });
     }
 
-    // ── 2. Validate the "Bearer <token>" format ────────────────────────────────
-    // split(' ') produces ['Bearer', '<token>'] for a well-formed header.
-    // Anything else (no space, wrong scheme, extra parts) is rejected.
+    // 2. Format validation: "Bearer <token>"
     const parts = authHeader.split(' ');
     if (parts.length !== 2 || parts[0] !== 'Bearer' || !parts[1]) {
       return res.status(401).json({
         success: false,
         data: null,
         error: {
-          code:    'MALFORMED_AUTH_HEADER',
-          message: 'Authorization header must be in the format: Bearer <token>.',
+          code: 'MALFORMED_AUTH_HEADER',
+          message: 'Authorization header must be in format: Bearer <token>.',
         },
       });
     }
 
-    const credential = parts[1];
+    const token = parts[1];
 
-    // ── 3. Guard: GOOGLE_CLIENT_ID must be configured ─────────────────────────
-    if (!process.env.GOOGLE_CLIENT_ID) {
-      const err = new Error('Server is not configured for Google authentication');
-      err.statusCode = 500;
-      return next(err);
-    }
-
-    // ── 4. Verify the Google ID token ─────────────────────────────────────────
-    // Same verification as in auth.controller.js — see that file for detailed
-    // comments on what verifyIdToken() checks.
-    let ticket;
+    // 3. Verify Firebase ID Token via Firebase Admin SDK
+    let decodedToken;
     try {
-      ticket = await googleClient.verifyIdToken({
-        idToken:  credential,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
+      decodedToken = await verifyFirebaseToken(token);
     } catch (verifyErr) {
-      // Log server-side for debugging. Do NOT forward raw error to client.
       console.error('[AUTH MIDDLEWARE] Token verification failed:', verifyErr.message);
       return res.status(401).json({
         success: false,
         data: null,
         error: {
-          code:    'INVALID_TOKEN',
+          code: 'INVALID_TOKEN',
           message: 'Authentication token is invalid or expired.',
         },
       });
     }
 
-    // ── 5. Attach verified identity to req.user ────────────────────────────────
-    // Only trust data from the VERIFIED payload, never from req.body or headers.
-    const payload = ticket.getPayload();
+    // 4. Resolve/Upsert corresponding user in PostgreSQL
+    const firebaseUid = decodedToken.uid;
+    const email = decodedToken.email || `${firebaseUid}@nova.user`;
+    const name = decodedToken.name || email.split('@')[0];
+
+    const { rows } = await db.query(
+      `INSERT INTO users (name, email, google_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (google_id) DO UPDATE SET
+         name = EXCLUDED.name,
+         email = EXCLUDED.email
+       RETURNING id, name, email`,
+      [name, email, firebaseUid]
+    );
+
+    const dbUser = rows[0];
+
+    // 5. Attach verified identity and DB user ID to req.user
     req.user = {
-      googleId: payload.sub,
-      email:    payload.email,
-      name:     payload.name || payload.email,
+      id: Number(dbUser.id),
+      firebaseUid,
+      email: dbUser.email,
+      name: dbUser.name,
     };
 
-    // ── 6. Proceed to the route handler ──────────────────────────────────────
     next();
 
   } catch (err) {
-    // Unexpected errors (not verification failures) go to centralized handler.
     next(err);
   }
 };
 
 module.exports = authMiddleware;
-

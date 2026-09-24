@@ -106,15 +106,24 @@ const sendValidationError = (res, field, message) =>
  */
 const createCheckin = async (req, res, next) => {
   try {
-    const { userId, sleepHours, energyLevel, logDate } = req.body;
+    const { userId, sleepHours, energyLevel, logDate } = req.body || {};
+    const targetUserId = req.user ? req.user.id : userId;
 
-    // ── Validate: userId ──────────────────────────────────────────────────────
-    // Must be present and a positive integer. We coerce with Number() so that
-    // the string "3" (common in JSON) is accepted alongside the number 3.
-    if (userId === undefined || userId === null || userId === '') {
+    if (userId !== undefined && userId !== null && req.user && Number(userId) !== Number(req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Cannot record check-in for a different user ID.',
+        },
+      });
+    }
+
+    if (targetUserId === undefined || targetUserId === null || targetUserId === '') {
       return sendValidationError(res, 'userId', 'userId is required.');
     }
-    const parsedUserId = Number(userId);
+    const parsedUserId = Number(targetUserId);
     if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
       return sendValidationError(res, 'userId', 'userId must be a positive integer.');
     }
@@ -167,24 +176,18 @@ const createCheckin = async (req, res, next) => {
        DO UPDATE SET
          sleep_hours  = EXCLUDED.sleep_hours,
          energy_level = EXCLUDED.energy_level
-       RETURNING
-         id,
-         log_date,
-         (xmax = 0) AS is_inserted`,
+       RETURNING id, log_date`,
       [parsedUserId, logDate, parsedSleep, parsedEnergy]
     );
 
-    const row      = rows[0];
-    const isInsert = row.is_inserted; // boolean from pg
+    const row = rows[0];
 
-    return res.status(isInsert ? 201 : 200).json({
+    return res.status(200).json({
       success: true,
       data: {
         logId:   row.id,
         logDate: row.log_date,
-        message: isInsert
-          ? 'Check-in logged successfully'
-          : 'Check-in updated for today',
+        message: 'Check-in logged successfully',
       },
       error: null,
     });

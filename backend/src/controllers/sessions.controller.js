@@ -103,15 +103,24 @@ const isValidIsoTimestamp = (v) => {
  */
 const createSession = async (req, res, next) => {
   try {
-    const { userId, durationMinutes, interruptions, completed, startedAt } = req.body;
+    const { userId, durationMinutes, interruptions, completed, startedAt } = req.body || {};
+    const targetUserId = req.user ? req.user.id : userId;
 
-    // ── Validate: userId ──────────────────────────────────────────────────────
-    // Must be a positive integer. We coerce with Number() so that the JSON
-    // string "3" (if somehow passed) is treated the same as the number 3.
-    if (userId === undefined || userId === null || userId === '') {
+    if (userId !== undefined && userId !== null && req.user && Number(userId) !== Number(req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Cannot record session for a different user ID.',
+        },
+      });
+    }
+
+    if (targetUserId === undefined || targetUserId === null || targetUserId === '') {
       return sendValidationError(res, 'userId', 'userId is required.');
     }
-    const parsedUserId = Number(userId);
+    const parsedUserId = Number(targetUserId);
     if (!isFiniteInteger(parsedUserId) || parsedUserId <= 0) {
       return sendValidationError(res, 'userId', 'userId must be a positive integer.');
     }
