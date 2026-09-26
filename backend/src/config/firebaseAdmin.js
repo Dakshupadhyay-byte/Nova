@@ -79,27 +79,9 @@ const verifyFirebaseToken = async (idToken) => {
     throw new Error('ID Token must be a non-empty string.');
   }
 
-  // Handle dev mock / test tokens if SDK is in mock mode or token is a test token
-  if (isDevMock || idToken.startsWith('mock-dev-token-')) {
-    // Return a valid mock DecodedIdToken structure for local testing without live Firebase credentials
-    const parts = idToken.split(':');
-    const uid = parts[1] || 'mock-firebase-uid-elena-vance';
-    const email = parts[2] || 'elena.vance@agency.ops';
-    const name = parts[3] || 'Elena Vance';
-
-    return {
-      uid,
-      email,
-      name,
-      iss: 'https://securetoken.google.com/nova-dev',
-      aud: 'nova-dev',
-      auth_time: Math.floor(Date.now() / 1000),
-      user_id: uid,
-      sub: uid,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 3600,
-      firebase: { identities: {}, sign_in_provider: 'google.com' },
-    };
+  // Real Firebase Admin SDK verification only. No mock fallbacks.
+  if (!admin.apps.length) {
+    throw new Error('Firebase Admin SDK is not initialized.');
   }
 
   return await admin.auth().verifyIdToken(idToken);

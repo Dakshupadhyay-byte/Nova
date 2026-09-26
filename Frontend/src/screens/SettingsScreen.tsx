@@ -11,9 +11,20 @@ import {
   Sliders,
   Sparkles
 } from 'lucide-react';
-import { USER_PROFILE } from '../data/mockData';
+import { USER_PROFILE, UserProfileData } from '../data/mockData';
 
-export const SettingsScreen: React.FC = () => {
+interface SettingsScreenProps {
+  user?: Partial<UserProfileData>;
+}
+
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user }) => {
+  const profile = {
+    name: user?.name || USER_PROFILE.name,
+    role: user?.role || USER_PROFILE.role,
+    avatar: user?.avatar || USER_PROFILE.avatar,
+    email: user?.email || USER_PROFILE.email,
+    status: user?.status || USER_PROFILE.status,
+  };
   // Wearables connection state
   const [wearables, setWearables] = useState([
     { id: 'oura', name: 'Oura Ring Gen 3', status: 'Connected', lastSync: '3m ago', enabled: true },
@@ -60,22 +71,24 @@ export const SettingsScreen: React.FC = () => {
       <div className="bg-white rounded-3xl p-6 lg:p-8 border border-[#e2e7ff] shadow-xs flex items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <img
-            src={USER_PROFILE.avatar}
-            alt={USER_PROFILE.name}
+            src={profile.avatar}
+            alt={profile.name}
             referrerPolicy="no-referrer"
             className="w-16 h-16 rounded-full object-cover border-2 border-[#dae2fd] shadow-xs"
           />
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-xl font-bold text-[#131b2e]">{USER_PROFILE.name}</h3>
+              <h3 className="text-xl font-bold text-[#131b2e]">{profile.name}</h3>
               <span className="px-2.5 py-0.5 rounded-full bg-[#e6f7f4] text-[#00685f] text-[11px] font-bold">
-                {USER_PROFILE.status}
+                {profile.status}
               </span>
             </div>
-            <p className="text-[13px] text-[#6d7a77]">{USER_PROFILE.role}</p>
-            <div className="text-[11.5px] text-[#00685f] mt-1 font-mono">
-              Quantum Telemetry ID: #NOVA-994-EV
-            </div>
+            <p className="text-[13px] text-[#6d7a77]">{profile.role}</p>
+            {profile.email && (
+              <div className="text-[11.5px] text-[#00685f] mt-1 font-mono">
+                {profile.email}
+              </div>
+            )}
           </div>
         </div>
       </div>

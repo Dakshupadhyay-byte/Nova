@@ -6,9 +6,20 @@ interface HeaderProps {
   onSearch?: (query: string) => void;
   onOpenSettings?: () => void;
   onLockTerminal?: () => void;
+  user?: {
+    name: string;
+    role: string;
+    avatar?: string;
+    email?: string;
+  };
 }
 
-export const Header: React.FC<HeaderProps> = ({ onSearch, onOpenSettings, onLockTerminal }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  onSearch, 
+  onOpenSettings, 
+  onLockTerminal,
+  user = USER_PROFILE 
+}) => {
   const [searchVal, setSearchVal] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -144,17 +155,17 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, onOpenSettings, onLock
             title="User Profile Menu"
           >
             <img
-              src={USER_PROFILE.avatar}
-              alt={USER_PROFILE.name}
+              src={user.avatar || USER_PROFILE.avatar}
+              alt={user.name}
               referrerPolicy="no-referrer"
               className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-2xs group-hover:ring-2 group-hover:ring-[#00685f]/30 transition-all"
             />
             <div className="hidden sm:flex flex-col text-left">
               <span className="text-[13px] font-bold text-[#131b2e] leading-tight group-hover:text-[#00685f] transition-colors">
-                {USER_PROFILE.name}
+                {user.name}
               </span>
               <span className="text-[11px] text-[#6d7a77] leading-tight">
-                {USER_PROFILE.role}
+                {user.role}
               </span>
             </div>
           </div>
@@ -163,8 +174,11 @@ export const Header: React.FC<HeaderProps> = ({ onSearch, onOpenSettings, onLock
           {showUserMenu && (
             <div className="absolute right-0 mt-2 w-56 bg-white border border-[#dae2fd] rounded-2xl shadow-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
               <div className="px-3 py-2 border-b border-[#f0f3fd]">
-                <div className="text-[13px] font-bold text-[#131b2e]">{USER_PROFILE.name}</div>
-                <div className="text-[11px] text-[#6d7a77]">{USER_PROFILE.role}</div>
+                <div className="text-[13px] font-bold text-[#131b2e]">{user.name}</div>
+                <div className="text-[11px] text-[#6d7a77]">{user.role}</div>
+                {user.email && (
+                  <div className="text-[10px] text-[#00685f] font-mono mt-0.5 truncate">{user.email}</div>
+                )}
               </div>
               <div className="py-1">
                 <button

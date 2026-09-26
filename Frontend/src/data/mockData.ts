@@ -1,13 +1,123 @@
 import { FocusBlock, MetricOverview, VelocityDay, CircadianEvent } from '../types';
 import avatarImg from '../assets/images/avatar_elena_vance_1790254222548.jpg';
 
-export const USER_PROFILE = {
+export interface UserProfileData {
+  name: string;
+  role: string;
+  email: string;
+  avatar: string;
+  status: string;
+  quantumSync: number;
+  syncCycle: number;
+}
+
+export const DEFAULT_MOCK_USER: UserProfileData = {
   name: 'Elena Vance',
   role: 'High-Agency Ops',
+  email: 'elena.vance@agency.ops',
   avatar: avatarImg,
   status: 'EQUILIBRIUM ACTIVE',
   quantumSync: 99.4,
   syncCycle: 1094,
+};
+
+// Check if user is logged in and retrieve their account details from localStorage
+export const getActiveUser = (): UserProfileData => {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('nova_active_user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed.name === 'string' && parsed.name.trim() !== '') {
+          return {
+            ...DEFAULT_MOCK_USER,
+            ...parsed,
+          };
+        }
+      }
+    } catch {
+      // Storage access or parse error fallback
+    }
+  }
+  return DEFAULT_MOCK_USER;
+};
+
+// Save or clear logged-in account in persistent storage
+export const setActiveUser = (user: Partial<UserProfileData> | null) => {
+  if (typeof window !== 'undefined') {
+    if (!user) {
+      localStorage.removeItem('nova_active_user');
+      localStorage.removeItem('nova_is_authenticated');
+    } else {
+      const current = getActiveUser();
+      const updated = {
+        ...current,
+        ...user,
+      };
+      localStorage.setItem('nova_active_user', JSON.stringify(updated));
+      localStorage.setItem('nova_is_authenticated', 'true');
+    }
+    window.dispatchEvent(new CustomEvent('nova_user_change', { detail: user }));
+  }
+};
+
+export const clearActiveUser = () => {
+  setActiveUser(null);
+};
+
+export const isUserLoggedIn = (): boolean => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('nova_is_authenticated') === 'true' && !!localStorage.getItem('nova_active_user');
+  }
+  return false;
+};
+
+// Dynamic USER_PROFILE proxy with getters & setters:
+// When an account logs in, USER_PROFILE immediately returns that account's name, email,
+// avatar and role everywhere in the app instead of stale mock data.
+export const USER_PROFILE: UserProfileData = {
+  get name() {
+    return getActiveUser().name;
+  },
+  set name(val: string) {
+    setActiveUser({ name: val });
+  },
+  get role() {
+    return getActiveUser().role;
+  },
+  set role(val: string) {
+    setActiveUser({ role: val });
+  },
+  get email() {
+    return getActiveUser().email;
+  },
+  set email(val: string) {
+    setActiveUser({ email: val });
+  },
+  get avatar() {
+    return getActiveUser().avatar;
+  },
+  set avatar(val: string) {
+    setActiveUser({ avatar: val });
+  },
+  get status() {
+    return getActiveUser().status;
+  },
+  set status(val: string) {
+    setActiveUser({ status: val });
+  },
+  get quantumSync() {
+    return getActiveUser().quantumSync;
+  },
+  set quantumSync(val: number) {
+    setActiveUser({ quantumSync: val });
+  },
+  get syncCycle() {
+    return getActiveUser().syncCycle;
+  },
+  set syncCycle(val: number) {
+    setActiveUser({ syncCycle: val });
+  },
 };
 
 export const INITIAL_METRICS: MetricOverview = {

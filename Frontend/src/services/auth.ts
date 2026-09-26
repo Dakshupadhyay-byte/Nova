@@ -37,22 +37,8 @@ export const signInWithGoogle = async (): Promise<{ user: AuthStateUser; token: 
       token,
     };
   } catch (err: any) {
-    console.warn('[AUTH SERVICE] Firebase popup error/unconfigured key:', err?.message || err);
-    
-    // Dev fallback if Firebase client keys are not yet configured in local environment
-    const mockUid = 'mock-firebase-uid-elena-vance';
-    const mockEmail = 'elena.vance@agency.ops';
-    const mockName = 'Elena Vance';
-    const mockToken = `mock-dev-token-12345:${mockUid}:${mockEmail}:${encodeURIComponent(mockName)}`;
-
-    return {
-      user: {
-        uid: mockUid,
-        name: mockName,
-        email: mockEmail,
-      },
-      token: mockToken,
-    };
+    console.error('[AUTH SERVICE] Firebase popup error/unconfigured key:', err?.message || err);
+    throw err;
   }
 };
 

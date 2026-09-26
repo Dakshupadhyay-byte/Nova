@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { onAuthChange, logOut } from './services/auth';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { OverviewScreen } from './screens/OverviewScreen';
@@ -12,123 +13,94 @@ import { CheckInScreen } from './screens/CheckInScreen';
 import { AnalyticsScreen } from './screens/AnalyticsScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
-import { LoginScreen } from './screens/LoginScreen';
-import { INITIAL_METRICS, INITIAL_FOCUS_BLOCKS } from './data/mockData';
+import { LoginScreen, AuthenticatedUser } from './screens/LoginScreen';
+import { 
+  INITIAL_METRICS, 
+  INITIAL_FOCUS_BLOCKS, 
+  USER_PROFILE, 
+  getActiveUser, 
+  setActiveUser, 
+  isUserLoggedIn 
+} from './data/mockData';
 import { NavTab, MetricOverview, FocusBlock } from './types';
-import { onAuthChange, logOut, AuthStateUser } from './services/auth';
-import { syncUser, getDashboard, recordSession, submitCheckin, DbUser } from './services/api';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('overview');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [authUser, setAuthUser] = useState<AuthStateUser | null>(null);
-  const [dbUser, setDbUser] = useState<DbUser | null>(null);
-  const [userToken, setUserToken] = useState<string | null>(null);
-
+  const [currentUser, setCurrentUser] = useState(() => getActiveUser());
   const [metrics, setMetrics] = useState<MetricOverview>(INITIAL_METRICS);
   const [focusBlocks, setFocusBlocks] = useState<FocusBlock[]>(INITIAL_FOCUS_BLOCKS);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // Firebase Auth persistent listener
+  // Keep state in sync with external user changes and Firebase Auth
   useEffect(() => {
-    const unsubscribe = onAuthChange(async (user, token) => {
-      if (user && token) {
-        setAuthUser(user);
-        setUserToken(token);
+    const handleUserUpdate = () => {
+      setCurrentUser(getActiveUser());
+    };
+    window.addEventListener('nova_user_change', handleUserUpdate);
+
+    const unsubscribeAuth = onAuthChange((user, token) => {
+      if (user) {
+        setActiveUser({
+          name: user.name,
+          email: user.email,
+          avatar: user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}&backgroundColor=00685f&textColor=ffffff`,
+        });
+        setCurrentUser(getActiveUser());
         setIsAuthenticated(true);
-
-        // Synchronize with PostgreSQL database
-        const syncedDbUser = await syncUser(token);
-        if (syncedDbUser) {
-          setDbUser(syncedDbUser);
-        }
-
-        // Fetch live dashboard metrics from backend
-        const dashData = await getDashboard(token);
-        if (dashData) {
-          setMetrics((prev) => ({
-            ...prev,
-            focusIndex: dashData.focusScore !== null ? dashData.focusScore : prev.focusIndex,
-            focusFlowPercent: dashData.focusScore !== null ? dashData.focusScore : prev.focusFlowPercent,
-            sleepHours: dashData.today?.sleepHours !== null && dashData.today?.sleepHours !== undefined
-              ? dashData.today.sleepHours
-              : prev.sleepHours,
-          }));
-        }
+        if (currentTab === 'login') setCurrentTab('overview');
       } else {
-        setAuthUser(null);
-        setDbUser(null);
-        setUserToken(null);
         setIsAuthenticated(false);
+        setCurrentTab('login');
       }
+      setIsAuthLoading(false);
     });
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      window.removeEventListener('nova_user_change', handleUserUpdate);
+      unsubscribeAuth();
+    };
+  }, [currentTab]);
 
-  // Handle new completed focus session from FocusScreen
-  const handleSessionComplete = async (newBlock: FocusBlock) => {
+  // Handle new completed focus session from the FocusScreen
+  const handleSessionComplete = (newBlock: FocusBlock) => {
     setFocusBlocks((prev) => [newBlock, ...prev]);
 
-    // Record session to PostgreSQL if token is present
-    if (userToken) {
-      await recordSession(
-        userToken,
-        newBlock.durationMinutes,
-        newBlock.interruptions,
-        true,
-        new Date().toISOString()
-      );
-      // Refresh dashboard after session
-      const dashData = await getDashboard(userToken);
-      if (dashData && dashData.focusScore !== null) {
-        setMetrics((prev) => ({
-          ...prev,
-          focusIndex: dashData.focusScore!,
-          focusFlowPercent: dashData.focusScore!,
-        }));
-      }
-    } else {
-      setMetrics((prev) => {
-        const updatedTotalMins = prev.focusMinutesTotal + newBlock.durationMinutes;
-        const updatedCount = prev.focusSessionsCount + 1;
-        const updatedFlowPct = Math.min(100, Math.round((updatedTotalMins / 90) * 100));
-        const updatedFocusIndex = Math.min(
-          99,
-          Math.round(updatedFlowPct * 0.4 + prev.exerciseBurnPercent * 0.3 + prev.sleepAlignmentPercent * 0.3)
-        );
+    setMetrics((prev) => {
+      const updatedTotalMins = prev.focusMinutesTotal + newBlock.durationMinutes;
+      const updatedCount = prev.focusSessionsCount + 1;
+      // Recalculate focus flow percent
+      const updatedFlowPct = Math.min(100, Math.round((updatedTotalMins / 90) * 100));
+      const updatedFocusIndex = Math.min(99, Math.round((updatedFlowPct * 0.4) + (prev.exerciseBurnPercent * 0.3) + (prev.sleepAlignmentPercent * 0.3)));
 
-        return {
-          ...prev,
-          focusMinutesTotal: updatedTotalMins,
-          focusSessionsCount: updatedCount,
-          focusFlowPercent: updatedFlowPct,
-          focusIndex: updatedFocusIndex,
-          syncCycle: prev.syncCycle + 1,
-        };
-      });
-    }
+      return {
+        ...prev,
+        focusMinutesTotal: updatedTotalMins,
+        focusSessionsCount: updatedCount,
+        focusFlowPercent: updatedFlowPct,
+        focusIndex: updatedFocusIndex,
+        syncCycle: prev.syncCycle + 1,
+      };
+    });
   };
 
-  const handleUpdateMetrics = async (updated: Partial<MetricOverview>) => {
+  const handleUpdateMetrics = (updated: Partial<MetricOverview>) => {
     setMetrics((prev) => ({
       ...prev,
       ...updated,
     }));
-
-    // If checkin metrics (sleepHours / energy) updated, persist to backend
-    if (userToken && updated.sleepHours !== undefined) {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const energyLevel = Math.min(10, Math.max(1, Math.round(metrics.focusIndex / 10))) || 7;
-      await submitCheckin(userToken, updated.sleepHours, energyLevel, todayStr);
-    }
   };
 
-  const handleLoginSuccess = async (userObj?: any, token?: string) => {
-    if (token) {
-      setUserToken(token);
-      const synced = await syncUser(token);
-      if (synced) setDbUser(synced);
+  const handleLoginSuccess = (user?: AuthenticatedUser) => {
+    if (user) {
+      setActiveUser({
+        name: user.name,
+        role: user.role || 'Bio-Harmonic Operator',
+        email: user.email || 'dipanshushah50@gmail.com',
+        avatar: user.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}&backgroundColor=00685f&textColor=ffffff`,
+      });
+      setCurrentUser(getActiveUser());
     }
     setIsAuthenticated(true);
     setCurrentTab('overview');
@@ -136,22 +108,25 @@ export default function App() {
 
   const handleLockTerminal = async () => {
     await logOut();
-    setAuthUser(null);
-    setDbUser(null);
-    setUserToken(null);
     setIsAuthenticated(false);
     setCurrentTab('login');
   };
 
-  // If user is locked or on login tab, show full-screen Login Screen
+  // Wait for initial auth check before rendering
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#faf8ff] text-[#131b2e] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-[#00685f]/30 border-t-[#00685f] rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // If user is locked or on the login tab, show full-screen Login Screen
   if (!isAuthenticated || currentTab === 'login') {
     return (
       <LoginScreen
         onLoginSuccess={handleLoginSuccess}
-        onContinueAsGuest={() => {
-          setIsAuthenticated(true);
-          setCurrentTab('overview');
-        }}
+        onContinueAsGuest={handleLoginSuccess}
       />
     );
   }
@@ -169,6 +144,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {/* Top Header */}
         <Header
+          user={currentUser}
           onSearch={(query) => setSearchQuery(query)}
           onOpenSettings={() => setCurrentTab('settings')}
           onLockTerminal={handleLockTerminal}
@@ -210,7 +186,7 @@ export default function App() {
           )}
 
           {currentTab === 'settings' && (
-            <SettingsScreen />
+            <SettingsScreen user={currentUser} />
           )}
         </main>
       </div>
