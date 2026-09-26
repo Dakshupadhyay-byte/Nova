@@ -161,8 +161,8 @@ const sendMessage = async (userMessage, selectedContext) => {
       config: {
         systemInstruction: NOVA_SYSTEM_INSTRUCTIONS,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
-        // thinkingBudget: 0 — disable thinking for low-latency conversational use.
-        thinkingConfig: { thinkingBudget: 0 },
+        // thinkingLevel: 'MINIMAL' — minimize thinking tokens for low-latency conversational use on Gemini 3.
+        thinkingConfig: { thinkingLevel: 'MINIMAL' },
       },
     });
   } catch (sdkErr) {
