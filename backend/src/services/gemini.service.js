@@ -16,7 +16,7 @@
 //     aiContext.service.js
 //
 // SDK:   @google/genai@2.24.0
-// Model: gemini-3.1-flash-lite  (cost-efficient, low-latency, high-throughput)
+// Model: gemini-2.5-flash  (stable, low-latency, price-performance)
 // API:   ai.models.generateContent({ model, contents, config: { systemInstruction } })
 // =============================================================================
 
@@ -27,7 +27,7 @@ const { GoogleGenAI } = require('@google/genai');
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 // The pinned model identifier, verified against the official Gemini API docs
-// at implementation time. Change only with explicit review.
+// at implementation time (2026-09-26). Change only with explicit review.
 const GEMINI_MODEL = 'gemini-3.1-flash-lite';
 
 // Maximum tokens we allow in the model's reply. Keeps responses concise and
@@ -137,6 +137,7 @@ const sendMessage = async (userMessage, selectedContext) => {
   if (selectedContext.recentFocus) {
     const f = selectedContext.recentFocus;
     contextLines.push(
+
       `Recent focus (last 7 days): ` +
       `${f.totalSessionsLast7Days} sessions, ` +
       `${f.completedLast7Days} completed, ` +
@@ -161,7 +162,8 @@ const sendMessage = async (userMessage, selectedContext) => {
       config: {
         systemInstruction: NOVA_SYSTEM_INSTRUCTIONS,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
-        // thinkingLevel: 'MINIMAL' — minimize thinking tokens for low-latency conversational use on Gemini 3.
+        // thinkingBudget: 0 — disable thinking for low-latency conversational use.
+        // gemini-2.5-flash has thinking ON by default; we turn it off for speed.
         thinkingConfig: { thinkingLevel: 'MINIMAL' },
       },
     });
