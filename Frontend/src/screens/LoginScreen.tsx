@@ -9,6 +9,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { USER_PROFILE, DEFAULT_MOCK_USER } from '../data/mockData';
+import { NovaLogo } from '../components/NovaLogo';
 
 export interface AuthenticatedUser {
   name: string;
@@ -75,10 +76,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       <header className="px-8 py-6 flex items-center justify-between">
         {/* Brand Lockup */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#00685f] flex items-center justify-center text-white shadow-sm">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
-            </svg>
+          <div className="flex items-center justify-center shrink-0">
+            <NovaLogo size="md" />
           </div>
           <div className="flex flex-col">
             <span className="text-[17px] font-bold tracking-tight text-[#131b2e] leading-tight">
@@ -99,10 +98,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
           {/* Central Logo / Shield Badge */}
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#e6f7f4] to-[#f0f3fd] border border-[#a2e3d9]/60 flex items-center justify-center text-[#00685f] shadow-inner relative group">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
-              </svg>
+            <div className="w-16 h-16 rounded-2xl bg-transparent border border-[#a2e3d9]/60 flex items-center justify-center shadow-inner relative group">
+              <NovaLogo size="lg" />
               <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white border border-[#dae2fd] flex items-center justify-center shadow-xs">
                 <Sparkles className="w-3.5 h-3.5 text-[#008378]" />
               </div>

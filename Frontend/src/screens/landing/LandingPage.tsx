@@ -2,14 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowRight, ShieldCheck, Target, Activity, BarChart3, Clock, ChevronDown } from 'lucide-react';
 import { LANDING_PREVIEW, NOVA_ACRONYM, FEATURES } from '../../data/landingContent';
-
-// ─── NOVA Logo SVG ────────────────────────────────────────────────────────────
-const NovaLogo = ({ size = 22, white = false }: { size?: number; white?: boolean }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke={white ? '#fff' : '#00685F'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
-  </svg>
-);
+import { NovaLogo } from '../../components/NovaLogo';
 
 // ─── Inline SVG Mini Bar Chart ────────────────────────────────────────────────
 const MiniBarChart = ({ data }: { data: number[] }) => {
@@ -119,10 +112,10 @@ export const LandingPage: React.FC = () => {
 
   const navLinks = [
     { label: 'Overview', key: 'hero' },
-    { label: 'Focus',    key: 'organize' },
+    { label: 'Focus', key: 'organize' },
     { label: 'Check-in', key: 'notice' },
     { label: 'Analytics', key: 'visualize' },
-    { label: 'History',  key: 'history' },
+    { label: 'History', key: 'history' },
   ];
 
   const acronymActive = ['notice', 'organize', 'visualize', 'act'];
@@ -143,8 +136,8 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           {/* Logo */}
           <button onClick={() => scrollTo('hero')} className="flex items-center gap-2.5 cursor-pointer">
-            <div className="w-9 h-9 rounded-full bg-[#00685F] flex items-center justify-center shadow-sm">
-              <NovaLogo white />
+            <div className="flex items-center justify-center shrink-0">
+              <NovaLogo size="md" />
             </div>
             <div className="flex flex-col leading-none">
               <span className="text-[16px] font-bold tracking-tight text-[#0D2422]">NOVA</span>
@@ -203,8 +196,9 @@ export const LandingPage: React.FC = () => {
       ══════════════════════════════════════════════════════════════════════ */}
       <section ref={sectionRefs.hero as React.RefObject<HTMLElement>} id="hero" className="min-h-screen flex flex-col pt-32 pb-20 px-6">
         <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col">
-          {/* Top Label */}
-          <div className="flex justify-center mb-8" style={{ animation: 'fadeUp 0.6s ease both' }}>
+          {/* Top Label & Hero Logo */}
+          <div className="flex flex-col items-center justify-center gap-4 mb-6" style={{ animation: 'fadeUp 0.6s ease both' }}>
+            <NovaLogo size="hero" />
             <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[#DDF4EF] border border-[#00685F]/20 rounded-full text-[#00685F] text-[12px] font-semibold tracking-wider uppercase">
               <Sparkles className="w-3.5 h-3.5" />
               <span>AI Focus &amp; Wellness Companion</span>
@@ -242,7 +236,7 @@ export const LandingPage: React.FC = () => {
               {/* Dashboard Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0F5F4]">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#00685F] flex items-center justify-center"><NovaLogo size={16} white /></div>
+                  <div className="w-8 h-8 rounded-full bg-[#00685F] flex items-center justify-center"><NovaLogo size={24} /></div>
                   <div>
                     <p className="text-[12px] text-[#687573] font-mono">NOVA DASHBOARD</p>
                     <p className="text-[13px] font-bold text-[#0D2422] -mt-0.5">Today's Focus Overview</p>
@@ -354,7 +348,7 @@ export const LandingPage: React.FC = () => {
               <div className="w-12 h-px bg-gradient-to-r from-[#E5EBE9] via-[#00685F]/40 to-[#E5EBE9] sm:mx-4 my-4 sm:my-0 rotate-90 sm:rotate-0" />
               <div className="flex flex-col items-center text-center">
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#00685F] to-[#004D45] flex flex-col items-center justify-center gap-1 shadow-md">
-                  <NovaLogo size={24} white />
+                  <NovaLogo size={36} />
                   <span className="text-[11px] text-white/80 font-medium">NOVA AI</span>
                 </div>
                 <span className="text-[13px] font-bold text-[#00685F] mt-2">Insights</span>
@@ -373,11 +367,10 @@ export const LandingPage: React.FC = () => {
         <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md border border-[#E5EBE9] rounded-full px-5 py-2 shadow-sm pointer-events-auto">
           {NOVA_ACRONYM.map((item) => (
             <button key={item.letter} onClick={() => scrollTo(item.word.toLowerCase())}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-bold transition-all cursor-pointer ${
-                activeSection === item.word.toLowerCase()
-                  ? 'bg-[#00685F] text-white'
-                  : 'text-[#687573] hover:text-[#0D2422]'
-              }`}>
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-bold transition-all cursor-pointer ${activeSection === item.word.toLowerCase()
+                ? 'bg-[#00685F] text-white'
+                : 'text-[#687573] hover:text-[#0D2422]'
+                }`}>
               <span>{item.letter}</span>
               <span className="hidden sm:block text-[11px] font-medium">{item.word}</span>
             </button>
@@ -791,8 +784,8 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-3xl mx-auto text-center">
           <Reveal>
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-[#00685F] flex items-center justify-center shadow-lg">
-                <NovaLogo size={32} white />
+              <div className="w-16 h-16 rounded-2xl bg-transparent flex items-center justify-center shadow-lg">
+                <NovaLogo size={64} />
               </div>
             </div>
             <div className="mb-6">
@@ -834,7 +827,7 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-8 h-8 rounded-full bg-[#00685F] flex items-center justify-center"><NovaLogo size={16} white /></div>
+              <div className="w-8 h-8 flex items-center justify-center"><NovaLogo size={32} /></div>
               <span className="text-[16px] font-bold text-[#0D2422]">NOVA</span>
             </div>
             <p className="text-[12px] text-[#687573]">Notice. Organize. Visualize. Act.</p>
@@ -842,10 +835,10 @@ export const LandingPage: React.FC = () => {
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             {[
               { label: 'Overview', key: 'hero' },
-              { label: 'Focus',    key: 'organize' },
+              { label: 'Focus', key: 'organize' },
               { label: 'Check-in', key: 'notice' },
               { label: 'Analytics', key: 'visualize' },
-              { label: 'History',  key: 'history' },
+              { label: 'History', key: 'history' },
             ].map(l => (
               <button key={l.key} onClick={() => scrollTo(l.key)}
                 className="text-[13px] text-[#687573] hover:text-[#00685F] transition-colors cursor-pointer">

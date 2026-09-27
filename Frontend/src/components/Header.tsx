@@ -27,21 +27,21 @@ export const Header: React.FC<HeaderProps> = ({
     {
       id: 'n1',
       title: 'Optimal Wind-Down Window',
-      desc: 'Predicted REM deficit: Target 10:15 PM bed routine to maintain 9.4 Hz baseline.',
+      desc: 'Target 10:15 PM bed routine for optimal energy tomorrow.',
       time: '12m ago',
       read: false,
     },
     {
       id: 'n2',
-      title: 'Zone 2 Metabolic Calibration',
-      desc: '32-minute morning cardio elevated mitochondrial oxidative capacity by +14%.',
+      title: 'Morning Cardio Completed',
+      desc: '32-minute morning cardio boosted your energy score.',
       time: '2h ago',
       read: false,
     },
     {
       id: 'n3',
-      title: 'Binaural Alpha Frequency Locked',
-      desc: 'Carrier frequency 216Hz + 9.4Hz pulse synchronized with Oura telemetry.',
+      title: 'Focus Session Completed',
+      desc: '25 minutes of deep focus logged successfully.',
       time: '4h ago',
       read: true,
     },
@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
           type="text"
           value={searchVal}
           onChange={handleSearchChange}
-          placeholder="Search bio-telemetry, sessions, protocols..."
+          placeholder="Search focus sessions, sleep, energy..."
           className="w-full pl-10 pr-12 py-2 text-[13.5px] bg-[#f0f3fd]/80 hover:bg-[#ebf0fd] focus:bg-white text-[#131b2e] placeholder-[#6d7a77] rounded-xl border border-[#dae2fd] focus:border-[#00685f] focus:ring-2 focus:ring-[#00685f]/15 focus:outline-hidden transition-all duration-150"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -79,11 +79,6 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center gap-4">
-        {/* Status Pill Badge */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#e6f7f4] border border-[#a2e3d9]/60 text-[#00685f] text-[12px] font-semibold tracking-wide">
-          <span className="w-2 h-2 rounded-full bg-[#008378] animate-pulse"></span>
-          <span>EQUILIBRIUM ACTIVE</span>
-        </div>
 
         {/* Notification Bell */}
         <div className="relative">
@@ -104,7 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center justify-between pb-3 border-b border-[#f0f3fd]">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-[#712ae2]" />
-                  <span className="text-[13px] font-semibold text-[#131b2e]">Telemetry Insights</span>
+                  <span className="text-[13px] font-semibold text-[#131b2e]">NOVA Insights</span>
                 </div>
                 {unreadCount > 0 && (
                   <button
@@ -164,9 +159,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[13px] font-bold text-[#131b2e] leading-tight group-hover:text-[#00685f] transition-colors">
                 {user.name}
               </span>
-              <span className="text-[11px] text-[#6d7a77] leading-tight">
-                {user.role}
-              </span>
             </div>
           </div>
 
@@ -188,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   className="w-full text-left px-3 py-2 rounded-xl text-[12.5px] font-medium text-[#3d4947] hover:bg-[#f0f3fd] hover:text-[#131b2e] transition-colors"
                 >
-                  System & Telemetry Settings
+                  System Settings
                 </button>
                 <button
                   onClick={() => {

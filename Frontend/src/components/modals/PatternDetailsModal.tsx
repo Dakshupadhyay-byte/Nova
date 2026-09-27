@@ -27,12 +27,12 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-[#131b2e]">Nova Neural Pattern Discovery</h3>
+                <h3 className="text-lg font-bold text-[#131b2e]">NOVA Pattern Insights</h3>
                 <span className="px-2 py-0.5 rounded-full bg-[#f4effe] text-[#712ae2] text-[10px] font-bold">
                   98% Confidence
                 </span>
               </div>
-              <p className="text-[12px] text-[#6d7a77]">Biometric Correlation Analysis (Last 30 Days)</p>
+              <p className="text-[12px] text-[#6d7a77]">Wellness Correlation Analysis (Last 30 Days)</p>
             </div>
           </div>
           <button
@@ -88,7 +88,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#00685f] shrink-0 mt-0.5" />
-                <span><strong>Theta Soundscape:</strong> Enable 6.0 Hz binaural drift 15 minutes before bed.</span>
+                <span><strong>Calm Soundscape:</strong> Enable ambient wind-down sounds 15 minutes before bed.</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#00685f] shrink-0 mt-0.5" />

@@ -143,12 +143,12 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#dae2fd] text-[#3d4947] hover:text-[#131b2e] hover:bg-[#f0f3fd] transition-colors text-[13px] font-medium"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Exit Focus Chamber</span>
+          <span>Exit Focus Mode</span>
         </button>
 
         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#e6f7f4] border border-[#a2e3d9] text-[#00685f] text-[12px] font-bold">
           <span className="w-2 h-2 rounded-full bg-[#008378] animate-pulse"></span>
-          <span>BINAURAL RESONANCE READY</span>
+          <span>FOCUS SOUNDSCAPE READY</span>
         </div>
       </div>
 
@@ -220,7 +220,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
                 {formatTime(secondsRemaining)}
               </span>
               <span className="text-[12px] font-semibold text-[#00685f] mt-1.5 uppercase tracking-wider">
-                {isActive ? 'Flow State Active' : 'Chamber Paused'}
+                {isActive ? 'Focus Active' : 'Focus Paused'}
               </span>
             </div>
           </div>
@@ -255,7 +255,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
             className="px-8 py-3.5 rounded-2xl bg-[#00685f] hover:bg-[#005049] text-white text-[15px] font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2.5 cursor-pointer"
           >
             {isActive ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
-            <span>{isActive ? 'Pause Flow' : 'Lock In Flow'}</span>
+            <span>{isActive ? 'Pause Flow' : 'Start Focus Session'}</span>
           </button>
 
           <button
@@ -286,7 +286,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
                 onClick={() => toggleAudio()}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
                   isPlayingAudio
-                    ? 'bg-[#00685f] text-white shadow-xs'
+                    ? 'bg-[#00685f]'
                     : 'bg-white border border-[#dae2fd] text-[#6d7a77] hover:text-[#131b2e]'
                 }`}
               >
@@ -294,13 +294,13 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
               </button>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-bold text-[#131b2e]">Binaural Soundscape</span>
+                  <span className="text-[13px] font-bold text-[#131b2e]">Focus Soundscape</span>
                   <span className={`text-[11px] font-bold ${isPlayingAudio ? 'text-[#00685f]' : 'text-[#6d7a77]'}`}>
                     {isPlayingAudio ? '● Streaming Audio' : 'Muted'}
                   </span>
                 </div>
                 <div className="text-[11.5px] text-[#6d7a77]">
-                  Carrier: 216 Hz • Real-time WebAudio synthesis
+                  Carrier: 216 Hz • Ambient sound generator
                 </div>
               </div>
             </div>
@@ -381,7 +381,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
           <div className="bg-white rounded-3xl max-w-sm w-full border border-[#dae2fd] shadow-2xl p-6">
             <h4 className="text-base font-bold text-[#131b2e] mb-1">Log Interruption</h4>
             <p className="text-[12px] text-[#6d7a77] mb-3">
-              Logging context switches preserves awareness without breaking your flow mental model.
+              Logging context switches preserves awareness without breaking your focus workflow.
             </p>
             <input
               type="text"
@@ -419,7 +419,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
             </div>
             <h3 className="text-xl font-bold text-[#131b2e]">Deep Focus Block Complete!</h3>
             <p className="text-[13px] text-[#3d4947] mt-1 mb-4">
-              Neuro-harmonic resonance recorded. Executive stamina restored.
+              Focus session logged successfully. Energy restored.
             </p>
             <div className="p-3 bg-[#faf8ff] rounded-2xl border border-[#eaedff] text-left text-[12.5px] space-y-1.5 mb-5">
               <div className="flex justify-between">

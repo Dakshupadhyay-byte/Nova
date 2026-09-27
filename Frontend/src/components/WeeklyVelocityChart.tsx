@@ -47,10 +47,10 @@ export const WeeklyVelocityChart: React.FC<WeeklyVelocityChartProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
         <div className="flex items-center gap-2.5">
           <span className="text-[11px] font-bold tracking-wider text-[#6d7a77] uppercase font-mono">
-            CHRONOMETRIC PROGRESSION
+            WEEKLY FOCUS PATTERNS
           </span>
           <span className="px-2.5 py-0.5 rounded-full bg-[#f0f3fd] border border-[#dae2fd] text-[#3d4947] text-[11px] font-medium">
-            24-Hr Timeline Matrix
+            24-Hour Timeline
           </span>
         </div>
 
@@ -58,7 +58,7 @@ export const WeeklyVelocityChart: React.FC<WeeklyVelocityChartProps> = ({
           onClick={onOpenTimelineModal}
           className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-[12px] font-medium text-[#00685f] bg-[#eefaf8] hover:bg-[#e2f5f1] border border-[#b2e7df]/80 transition-colors"
         >
-          <span>Inspect Timeline Graph</span>
+          <span>View Timeline Details</span>
           <ArrowUpRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -183,7 +183,7 @@ export const WeeklyVelocityChart: React.FC<WeeklyVelocityChartProps> = ({
         ))}
       </div>
 
-      {/* Expand Circadian Timeline Bar */}
+      {/* Expand Timeline Bar */}
       <div
         onClick={onOpenTimelineModal}
         className="mt-3.5 flex items-center justify-between text-[12px] text-[#3d4947] hover:text-[#00685f] hover:bg-[#f4f7ff] p-2.5 rounded-xl cursor-pointer transition-colors group"
@@ -191,7 +191,7 @@ export const WeeklyVelocityChart: React.FC<WeeklyVelocityChartProps> = ({
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-[#00685f] group-hover:scale-110 transition-transform" />
           <span className="font-medium">
-            Expand 24-hr multi-modal circadian timeline (Sleep, Nutrition, Workout, Focus)
+            Expand 24-hr activity & focus timeline (Sleep, Energy, Focus)
           </span>
         </div>
         <span className="text-[11px] text-[#6d7a77] group-hover:text-[#00685f] transition-colors">

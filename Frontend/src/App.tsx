@@ -14,6 +14,7 @@ import { CheckInScreen } from './screens/CheckInScreen';
 import { AnalyticsScreen } from './screens/AnalyticsScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { NovaAIScreen } from './screens/NovaAIScreen';
 import { LoginScreen, AuthenticatedUser } from './screens/LoginScreen';
 import { LandingPage } from './screens/landing/LandingPage';
 import {
@@ -87,15 +88,16 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
   return (
     <div className="min-h-screen bg-[#faf8ff] text-[#131b2e] flex flex-col md:flex-row antialiased">
       <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} quantumSync={metrics.quantumSyncPercent} />
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header user={currentUser} onSearch={q => setSearchQuery(q)} onOpenSettings={() => setCurrentTab('settings')} onLockTerminal={handleLockTerminal} />
-        <main className="flex-1 pb-16">
-          {currentTab === 'overview' && <OverviewScreen metrics={metrics} focusBlocks={focusBlocks} onStartFocus={() => setCurrentTab('focus')} onViewFullLogbook={() => setCurrentTab('history')} searchQuery={searchQuery} />}
+        <main className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-16">
+          {currentTab === 'overview' && <OverviewScreen metrics={metrics} focusBlocks={focusBlocks} onStartFocus={() => setCurrentTab('focus')} onViewFullLogbook={() => setCurrentTab('history')} onOpenNovaAI={() => setCurrentTab('nova-ai')} searchQuery={searchQuery} />}
           {currentTab === 'focus' && <FocusScreen onBackToOverview={() => setCurrentTab('overview')} onSessionComplete={handleSessionComplete} />}
           {currentTab === 'checkin' && <CheckInScreen metrics={metrics} onUpdateMetrics={handleUpdateMetrics} onGoToOverview={() => setCurrentTab('overview')} />}
           {currentTab === 'analytics' && <AnalyticsScreen metrics={metrics} />}
           {currentTab === 'history' && <HistoryScreen focusBlocks={focusBlocks} />}
           {currentTab === 'settings' && <SettingsScreen user={currentUser} />}
+          {currentTab === 'nova-ai' && <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden"><NovaAIScreen /></div>}
         </main>
       </div>
     </div>

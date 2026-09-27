@@ -57,13 +57,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user }) => {
       <div>
         <div className="flex items-center gap-2 text-[12px] font-semibold text-[#00685f] tracking-wide mb-1 font-mono">
           <Settings className="w-3.5 h-3.5" />
-          <span>SYSTEM CALIBRATION & PREFERENCES</span>
+          <span>SYSTEM PREFERENCES</span>
         </div>
         <h1 className="text-3xl font-bold text-[#131b2e] tracking-tight">
-          System & Telemetry Settings
+          System Settings
         </h1>
         <p className="text-[14px] text-[#3d4947] mt-1">
-          Configure wearable sensor bridges, audio carrier frequencies, and circadian wind-down triggers.
+          Configure wearable devices, audio soundscapes, and bedtime wind-down reminders.
         </p>
       </div>
 
@@ -97,8 +97,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user }) => {
       <div className="bg-white rounded-3xl p-6 lg:p-8 border border-[#e2e7ff] shadow-xs space-y-5">
         <div className="flex items-center justify-between pb-3 border-b border-[#f0f3fd]">
           <div>
-            <h3 className="text-lg font-bold text-[#131b2e]">Sensor Hardware Bridges</h3>
-            <p className="text-[12px] text-[#6d7a77]">Multi-modal biometric sync sources</p>
+            <h3 className="text-lg font-bold text-[#131b2e]">Connected Wearables & Apps</h3>
+            <p className="text-[12px] text-[#6d7a77]">Sync focus, sleep, and fitness data</p>
           </div>
           <span className="text-[12px] font-semibold text-[#00685f]">
             {wearables.filter((w) => w.enabled).length} Active Sources
@@ -143,7 +143,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user }) => {
       {/* Binaural & Audio Synthesis Preferences */}
       <div className="bg-white rounded-3xl p-6 lg:p-8 border border-[#e2e7ff] shadow-xs space-y-5">
         <h3 className="text-lg font-bold text-[#131b2e] pb-3 border-b border-[#f0f3fd]">
-          Binaural Soundscape Defaults
+          Focus Soundscape Defaults
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -188,7 +188,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user }) => {
       {/* Wind-Down & Circadian Scheduler */}
       <div className="bg-white rounded-3xl p-6 lg:p-8 border border-[#e2e7ff] shadow-xs space-y-5">
         <h3 className="text-lg font-bold text-[#131b2e] pb-3 border-b border-[#f0f3fd]">
-          Circadian Rest Protocol
+          Bedtime Wind-Down Routine
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">

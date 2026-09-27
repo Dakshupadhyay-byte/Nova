@@ -56,7 +56,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ focusBlocks }) => 
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(filtered, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `nova_telemetry_export_${Date.now()}.json`);
+    downloadAnchor.setAttribute('download', `nova_data_export_${Date.now()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -84,13 +84,13 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ focusBlocks }) => 
         <div>
           <div className="flex items-center gap-2 text-[12px] font-semibold text-[#00685f] tracking-wide mb-1 font-mono">
             <Clock className="w-3.5 h-3.5" />
-            <span>CHRONOLOGICAL TELEMETRY REGISTRY</span>
+            <span>CHRONOLOGICAL LOGBOOK</span>
           </div>
           <h1 className="text-3xl font-bold text-[#131b2e] tracking-tight">
-            Full 24-Hour Multimodal Logbook
+            Activity & Focus Logbook
           </h1>
           <p className="text-[14px] text-[#3d4947] mt-1">
-            Complete chronological audit trail of biological rhythms, focus blocks, and somatic inputs.
+            Complete chronological history of your focus sessions, sleep, energy, and wellness.
           </p>
         </div>
 
@@ -99,7 +99,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ focusBlocks }) => 
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-[#faf8ff] border border-[#dae2fd] text-[#131b2e] text-[13px] font-semibold transition-colors shadow-2xs self-start sm:self-auto cursor-pointer"
         >
           <Download className="w-4 h-4 text-[#00685f]" />
-          <span>Export Telemetry (JSON)</span>
+          <span>Export Data (JSON)</span>
         </button>
       </div>
 

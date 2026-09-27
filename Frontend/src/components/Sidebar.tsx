@@ -6,10 +6,10 @@ import {
   BarChart3, 
   Clock, 
   Settings, 
-  Radio,
-  Lock
+  Lock 
 } from 'lucide-react';
 import { NavTab } from '../types';
+import { NovaLogo } from './NovaLogo';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -40,18 +40,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => onSelectTab('overview')}
           className="flex items-center gap-3 px-2 py-3 mb-6 cursor-pointer group"
         >
-          <div className="w-10 h-10 rounded-full bg-[#00685f] flex items-center justify-center text-white shadow-sm transition-transform duration-200 group-hover:scale-105">
-            {/* Bio-harmonic double infinity ring icon */}
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
-            </svg>
+          <div className="flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105">
+            <NovaLogo size="md" />
           </div>
           <div className="flex flex-col">
             <span className="text-[17px] font-bold tracking-tight text-[#131b2e] leading-tight">
               NOVA
             </span>
             <span className="text-[10px] font-semibold tracking-wider text-[#00685f] uppercase leading-none mt-0.5">
-              BIO-HARMONIC
+              NOTICE. ORGANIZE. VISUALIZE. ACT.
             </span>
           </div>
         </div>
@@ -83,22 +80,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
 
-      {/* Telemetry Link Bottom Status Card */}
-      <div className="bg-[#f0f3fd] border border-[#dae2fd] rounded-xl p-3.5 mt-8 shadow-xs">
-        <div className="flex items-center justify-between text-[11px] font-semibold text-[#6d7a77] tracking-wider uppercase mb-1">
-          <div className="flex items-center gap-1.5">
-            <Radio className="w-3 h-3 text-[#00685f]" />
-            <span>Telemetry Link</span>
-          </div>
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#008378] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00685f]"></span>
+      {/* Floating Circular NOVA AI Button (bottom-left fixed) */}
+      <button
+        type="button"
+        onClick={() => onSelectTab('nova-ai')}
+        aria-label="Open NOVA AI"
+        title="Open NOVA AI"
+        className={`fixed bottom-5 left-5 z-40 h-[50px] w-[50px] hover:w-[142px] focus-visible:w-[142px] rounded-full bg-white/95 backdrop-blur-md border shadow-md hover:shadow-xl flex items-center overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#7C5CFC]/40 cursor-pointer group px-[9px] ${
+          currentTab === 'nova-ai'
+            ? 'border-[#7C5CFC] ring-2 ring-[#7C5CFC]/20 shadow-lg'
+            : 'border-[#e2e7ff] hover:border-[#7C5CFC]/40'
+        }`}
+      >
+        {/* Soft AI Glow on Hover */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#7C5CFC]/10 via-[#22C7E8]/10 to-transparent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+        {/* Logo Container */}
+        <div className="shrink-0 w-8 h-8 flex items-center justify-center relative z-10 transition-transform duration-200 group-hover:scale-108">
+          <NovaLogo size={32} />
+        </div>
+
+        {/* Revealed NOVA AI text & Arrow on Hover */}
+        <div className="flex items-center gap-1.5 ml-2.5 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 translate-y-1 group-hover:translate-y-0 group-focus-visible:translate-y-0 transition-all duration-250 ease-out whitespace-nowrap relative z-10">
+          <span className="text-[13px] font-bold tracking-tight text-[#0D2422]">
+            NOVA AI
+          </span>
+          <span className="text-[#7C5CFC] text-[12px] font-bold">
+            →
           </span>
         </div>
-        <div className="text-[13px] font-medium text-[#131b2e] tabular-nums">
-          Quantum Sync: <span className="font-semibold text-[#00685f]">{quantumSync.toFixed(1)}%</span>
-        </div>
-      </div>
+      </button>
     </aside>
   );
 };

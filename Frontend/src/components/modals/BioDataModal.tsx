@@ -25,8 +25,8 @@ export const BioDataModal: React.FC<BioDataModalProps> = ({
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-[#131b2e]">Granular Bio-Telemetry Inspection</h3>
-              <p className="text-[12px] text-[#6d7a77]">Real-time neuro-harmonic sensor matrix • Oura + Quantum Telemetry Sync</p>
+              <h3 className="text-lg font-bold text-[#131b2e]">Granular Wellness Inspection</h3>
+              <p className="text-[12px] text-[#6d7a77]">Real-time focus & wellness metrics overview</p>
             </div>
           </div>
           <button
@@ -44,12 +44,12 @@ export const BioDataModal: React.FC<BioDataModalProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Waves className="w-4 h-4 text-[#00685f]" />
-                <span className="text-[13px] font-bold text-[#131b2e]">Alpha Rhythm Waveform</span>
+                <span className="text-[13px] font-bold text-[#131b2e]">Focus State Waveform</span>
               </div>
               <span className="text-lg font-bold text-[#00685f] font-mono tabular-nums">{metrics.alphaFrequencyHz} Hz</span>
             </div>
             <p className="text-[12px] text-[#3d4947] leading-relaxed">
-              Neural oscillatory activity currently centered in the ideal 8-12 Hz alpha frequency envelope. Indicates serene executive presence, high neuroplasticity, and low autonomic friction.
+              Focus activity currently centered in the ideal flow state range. Indicates steady attention and high clarity.
             </p>
             {/* Visual waveform simulation */}
             <div className="h-12 w-full bg-white/80 rounded-xl p-2 flex items-center justify-center overflow-hidden border border-[#b2e7df]/60">
@@ -82,26 +82,26 @@ export const BioDataModal: React.FC<BioDataModalProps> = ({
             <div className="p-3.5 rounded-2xl bg-[#faf8ff] border border-[#dae2fd]">
               <div className="text-[11px] font-bold text-[#6d7a77] uppercase">SpO2 Oxygen</div>
               <div className="text-xl font-bold text-[#131b2e] mt-1 tabular-nums">99.2%</div>
-              <div className="text-[10px] text-[#00685f] font-medium mt-0.5">Prefrontal stability</div>
+              <div className="text-[10px] text-[#00685f] font-medium mt-0.5">Optimal oxygenation</div>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-[#faf8ff] border border-[#dae2fd]">
-              <div className="text-[11px] font-bold text-[#6d7a77] uppercase">Neuro-Friction</div>
+              <div className="text-[11px] font-bold text-[#6d7a77] uppercase">Focus Resistance</div>
               <div className="text-xl font-bold text-[#712ae2] mt-1 tabular-nums">1.2 / 10</div>
               <div className="text-[10px] text-[#712ae2] font-medium mt-0.5">Minimal resistance</div>
             </div>
           </div>
 
-          {/* Raw Telemetry Packet Summary */}
+          {/* Raw Wellness Packet Summary */}
           <div className="p-4 rounded-2xl bg-[#faf8ff] border border-[#eaedff]">
             <div className="flex items-center justify-between text-[12px] font-bold text-[#131b2e] mb-2 font-mono">
-              <span>SYNC PACKET TELEMETRY #1094</span>
-              <span className="text-[#00685f]">VALIDATED 100%</span>
+              <span>WELLNESS SUMMARY PACKET</span>
+              <span className="text-[#00685f]">SYNCED</span>
             </div>
             <div className="text-[11px] font-mono text-[#3d4947] space-y-1 bg-white p-3 rounded-xl border border-[#dae2fd]">
               <div>TIMESTAMP: 2026-09-24T05:49:44.000Z</div>
-              <div>BINAURAL_CARRIER: 216.00 Hz | MODULATION: 9.40 Hz (Alpha)</div>
-              <div>HOMEOSTATIC_LOAD: 0.28 (Nominal) | ADENOSINE_ACCUMULATION: 72%</div>
+              <div>FOCUS_FREQUENCY: 9.40 Hz (Alpha Rhythm)</div>
+              <div>DAILY_ENERGY_RESERVE: 72% | RECOVERY_STATE: Optimal</div>
               <div>OPTIMAL_WIND_DOWN_TARGET: 22:15:00 (+45m earlier recommended)</div>
             </div>
           </div>
@@ -113,7 +113,7 @@ export const BioDataModal: React.FC<BioDataModalProps> = ({
             onClick={onClose}
             className="px-5 py-2 rounded-xl text-[13px] font-bold text-white bg-[#00685f] hover:bg-[#005049] transition-colors"
           >
-            Close Telemetry View
+            Close Overview
           </button>
         </div>
       </div>

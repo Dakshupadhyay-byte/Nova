@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import { WelcomeBanner } from '../components/WelcomeBanner';
 import { ConcentricRings } from '../components/ConcentricRings';
 import { WeeklyVelocityChart } from '../components/WeeklyVelocityChart';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { SleepCard } from '../components/SleepCard';
 import { NovaNoticedCard } from '../components/NovaNoticedCard';
+import { NovaAICard } from '../components/NovaAICard';
 import { FocusActivityList } from '../components/FocusActivityList';
+import { NovaLogo } from '../components/NovaLogo';
 import { BioDataModal } from '../components/modals/BioDataModal';
 import { PatternDetailsModal } from '../components/modals/PatternDetailsModal';
 import { CircadianModal } from '../components/modals/CircadianModal';
@@ -16,6 +19,7 @@ interface OverviewScreenProps {
   focusBlocks: FocusBlock[];
   onStartFocus: () => void;
   onViewFullLogbook: () => void;
+  onOpenNovaAI: () => void;
   searchQuery: string;
 }
 
@@ -24,6 +28,7 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
   focusBlocks,
   onStartFocus,
   onViewFullLogbook,
+  onOpenNovaAI,
   searchQuery,
 }) => {
   const [timeframe, setTimeframe] = useState<'today' | '7days' | 'cycles'>('today');
@@ -99,6 +104,11 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
             onViewFullLogbook={onViewFullLogbook}
             onSelectBlock={(block) => setSelectedBlock(block)}
           />
+        </div>
+
+        {/* Flagship NOVA AI Feature Showcase Banner (spanning 12 columns) */}
+        <div className="lg:col-span-12 mt-2">
+          <NovaAICard onOpenNovaAI={onOpenNovaAI} />
         </div>
       </div>
 

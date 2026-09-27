@@ -50,9 +50,6 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
       {/* Top Header */}
       <div className="flex items-center justify-between gap-3 mb-1">
         <div className="flex items-center gap-2.5">
-          <span className="text-[11px] font-bold tracking-wider text-[#6d7a77] uppercase font-mono">
-            COMPOSITE EQUILIBRIUM
-          </span>
           <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#e6f7f4] border border-[#a2e3d9]/70 text-[#00685f] text-[11px] font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-[#008378] animate-pulse"></span>
             <span>Live Interactive</span>
@@ -69,13 +66,13 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
       </div>
 
       <h2 className="text-[22px] font-bold tracking-tight text-[#131b2e] mb-4">
-        Focus & Neuro Balance
+        Focus & Wellness
       </h2>
 
       {/* Sub-notice pill banner */}
       <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#f4f7ff] border border-[#dae2fd]/70 text-[#3d4947] text-[12px] mb-6">
         <Info className="w-4 h-4 text-[#712ae2] shrink-0" />
-        <span>Hover or click rings & legend items for deep granular telemetry breakdown</span>
+        <span>Explore your focus patterns and see how your wellness connects to productivity.</span>
       </div>
 
       {/* Main Rings & Legend Layout */}
@@ -202,7 +199,7 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
                 : 'FOCUS INDEX'}
             </span>
             <span className="text-[9px] font-semibold text-[#6d7a77] tracking-widest uppercase">
-              BIO-INDEX
+              WELLNESS INDEX
             </span>
           </div>
         </div>
@@ -300,14 +297,14 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
         <div className="flex items-center gap-2 text-[12px] text-[#3d4947]">
           <ShieldCheck className="w-4 h-4 text-[#00685f] shrink-0" />
           <span>
-            Neuro-harmonic resonance in alpha rhythm range (<strong className="font-semibold text-[#131b2e]">{metrics.alphaFrequencyHz} Hz</strong>)
+            Optimal focus rhythm maintained (<strong className="font-semibold text-[#131b2e]">{metrics.alphaFrequencyHz} Hz</strong>)
           </span>
         </div>
         <button
           onClick={onInspectBioData}
           className="inline-flex items-center gap-1.5 text-[11.5px] font-bold tracking-wider text-[#00685f] hover:text-[#005048] uppercase transition-colors self-start sm:self-auto"
         >
-          <span>INSPECT BIO-DATA</span>
+          <span>INSPECT WELLNESS DATA</span>
           <ArrowUpRight className="w-4 h-4" />
         </button>
       </div>

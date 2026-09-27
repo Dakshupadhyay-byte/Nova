@@ -1,4 +1,4 @@
-export type NavTab = 'overview' | 'focus' | 'checkin' | 'analytics' | 'history' | 'settings' | 'login';
+export type NavTab = 'overview' | 'focus' | 'checkin' | 'analytics' | 'history' | 'settings' | 'login' | 'nova-ai';
 
 export interface FocusBlock {
   id: string;

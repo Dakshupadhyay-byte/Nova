@@ -74,13 +74,13 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
       <div className="mb-8">
         <div className="flex items-center gap-2 text-[12px] font-semibold text-[#00685f] tracking-wide mb-1 font-mono">
           <Activity className="w-3.5 h-3.5" />
-          <span>DAILY EQUILIBRIUM CALIBRATION</span>
+          <span>DAILY WELLNESS CHECK-IN</span>
         </div>
         <h1 className="text-3xl font-bold text-[#131b2e] tracking-tight">
-          Subjective State & Neuro-Reflex Check-in
+          Focus & Wellness Check-in
         </h1>
         <p className="text-[14px] text-[#3d4947] mt-1">
-          Calibrate composite equilibrium by reporting real cognitive clarity, somatic energy, and testing autonomic reaction speed.
+          Check in on your mental clarity, physical energy, and focus reaction speed.
         </p>
       </div>
 
@@ -89,7 +89,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
           {/* Sliders Card */}
           <div className="bg-white rounded-3xl p-6 lg:p-8 border border-[#e2e7ff] shadow-xs space-y-6">
             <h3 className="text-lg font-bold text-[#131b2e] border-b border-[#f0f3fd] pb-3">
-              1. Somatic & Cognitive Ratings
+              1. Energy & Focus Ratings
             </h3>
 
             {/* Mental Clarity */}
@@ -97,7 +97,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 text-[13.5px] font-bold text-[#131b2e]">
                   <Brain className="w-4 h-4 text-[#712ae2]" />
-                  <span>Mental Clarity & Executive Bandwidth</span>
+                  <span>Mental Clarity & Focus</span>
                 </div>
                 <span className="text-lg font-bold text-[#712ae2] tabular-nums">{mentalClarity} / 10</span>
               </div>
@@ -121,7 +121,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 text-[13.5px] font-bold text-[#131b2e]">
                   <Zap className="w-4 h-4 text-[#00685f]" />
-                  <span>Physical Vitality & Somatic Drive</span>
+                  <span>Physical Energy & Vitality</span>
                 </div>
                 <span className="text-lg font-bold text-[#00685f] tabular-nums">{physicalEnergy} / 10</span>
               </div>
@@ -136,7 +136,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
               <div className="flex justify-between text-[11px] text-[#6d7a77] mt-1">
                 <span>1 - Lethargic</span>
                 <span>5 - Neutral</span>
-                <span>10 - Peak Mitochondrial Prime</span>
+                <span>10 - High Energy</span>
               </div>
             </div>
 
@@ -145,7 +145,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 text-[13.5px] font-bold text-[#131b2e]">
                   <Heart className="w-4 h-4 text-rose-500" />
-                  <span>Autonomic Calm vs Sympathetic Tension</span>
+                  <span>Calm vs Stress Level</span>
                 </div>
                 <span className="text-lg font-bold text-[#0284c7] tabular-nums">{autonomicTone} / 10</span>
               </div>
@@ -158,20 +158,20 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
                 className="w-full accent-[#0284c7] cursor-pointer"
               />
               <div className="flex justify-between text-[11px] text-[#6d7a77] mt-1">
-                <span>1 - High Friction / Fight-or-Flight</span>
-                <span>10 - Rest & Digest Tranquility</span>
+                <span>1 - High Stress</span>
+                <span>10 - Deeply Calm</span>
               </div>
             </div>
           </div>
 
-          {/* Neuro-Reflex Reaction Test Card */}
+          {/* Reaction Test Card */}
           <div className="bg-white rounded-3xl p-6 lg:p-8 border border-[#e2e7ff] shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Timer className="w-4 h-4 text-[#00685f]" />
-                <h3 className="text-lg font-bold text-[#131b2e]">2. Micro Neuro-Reflex Test</h3>
+                <h3 className="text-lg font-bold text-[#131b2e]">2. Quick Reaction Test</h3>
               </div>
-              <span className="text-[11.5px] text-[#6d7a77]">Validates neural conduction latency</span>
+              <span className="text-[11.5px] text-[#6d7a77]">Measures your current focus reaction time</span>
             </div>
 
             {testState === 'idle' && (
@@ -215,8 +215,8 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
                 </div>
                 <p className="text-[12px] text-[#3d4947]">
                   {reactionTimeMs && reactionTimeMs < 240
-                    ? '⚡ Exceptional conduction speed — high executive focus potential!'
-                    : 'Good somatic readiness recorded.'}
+                    ? '⚡ Exceptional speed — ready for deep focus!'
+                    : 'Great reaction time recorded.'}
                 </p>
                 <button
                   onClick={startReactionTest}
@@ -234,7 +234,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
               onClick={handleSubmitCheckIn}
               className="px-8 py-3.5 rounded-2xl bg-[#00685f] hover:bg-[#005049] text-white text-[14px] font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
             >
-              <span>Submit Daily Calibration</span>
+              <span>Submit Check-in</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -245,9 +245,9 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
           <div className="w-14 h-14 rounded-full bg-[#d8f5ef] text-[#00685f] flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-bold text-[#131b2e]">Telemetry Synchronized!</h2>
+          <h2 className="text-2xl font-bold text-[#131b2e]">Check-in Complete!</h2>
           <p className="text-[14px] text-[#3d4947] max-w-md mx-auto mt-2 leading-relaxed">
-            Your subjective feedback and reaction reflex metrics have recalibrated your Composite Equilibrium model.
+            Your check-in ratings and reaction time have updated your daily Focus Overview.
           </p>
 
           <div className="my-6 p-4 rounded-2xl bg-[#faf8ff] border border-[#dae2fd] max-w-sm mx-auto flex items-center justify-around">

@@ -35,13 +35,13 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({ metrics }) => 
       <div>
         <div className="flex items-center gap-2 text-[12px] font-semibold text-[#00685f] tracking-wide mb-1 font-mono">
           <BarChart3 className="w-3.5 h-3.5" />
-          <span>LONGITUDINAL TELEMETRY INSIGHTS</span>
+          <span>LONGITUDINAL FOCUS & WELLNESS INSIGHTS</span>
         </div>
         <h1 className="text-3xl font-bold text-[#131b2e] tracking-tight">
-          Neuro-Harmonic Analytics
+          Focus & Wellness Analytics
         </h1>
         <p className="text-[14px] text-[#3d4947] mt-1">
-          Deep telemetry trends mapping biological recovery rhythms to high-order cognitive execution.
+          Insights mapping sleep, energy, and recovery to your daily focus performance.
         </p>
       </div>
 
@@ -75,14 +75,14 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({ metrics }) => 
 
         <div className="bg-white rounded-3xl p-6 border border-[#e2e7ff] shadow-xs">
           <div className="flex items-center justify-between text-[11px] font-bold text-[#6d7a77] uppercase">
-            <span>Zone 2 Priming Index</span>
+            <span>Energy Activity Index</span>
             <Zap className="w-4 h-4 text-[#0284c7]" />
           </div>
           <div className="text-3xl font-extrabold text-[#0284c7] mt-2 tabular-nums">
             105%
           </div>
           <p className="text-[12px] text-[#00685f] font-semibold mt-1">
-            Mitochondrial clearance target exceeded
+            Active movement target achieved
           </p>
         </div>
       </div>
@@ -91,11 +91,11 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({ metrics }) => 
       <div className="bg-white rounded-3xl p-6 lg:p-8 border border-[#e2e7ff] shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-bold text-[#131b2e]">Hourly Circadian Focus Velocity</h3>
-            <p className="text-[12px] text-[#6d7a77]">Cognitive intensity measured across work intervals</p>
+            <h3 className="text-lg font-bold text-[#131b2e]">Hourly Focus Distribution</h3>
+            <p className="text-[12px] text-[#6d7a77]">Focus time logged across daily work hours</p>
           </div>
           <span className="px-2.5 py-0.5 rounded-full bg-[#e6f7f4] text-[#00685f] text-[11px] font-bold">
-            Alpha Baseline Locked
+            Optimal Focus Rhythm
           </span>
         </div>
 
@@ -130,7 +130,7 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({ metrics }) => 
             <h3 className="text-base font-bold text-[#131b2e]">Sleep Duration vs Focus Output</h3>
           </div>
           <p className="text-[13px] text-[#3d4947] leading-relaxed mb-4">
-            Over 28 consecutive days of biometric sync, nights with ≥ 7 hours sleep produced an average of <strong>75 minutes of deep flow</strong> with 0.6 interruptions, whereas sub-7-hour nights averaged only 48 minutes with 2.4 interruptions.
+            Over 28 consecutive days, nights with ≥ 7 hours sleep produced an average of <strong>75 minutes of deep flow</strong> with 0.6 interruptions, whereas sub-7-hour nights averaged only 48 minutes with 2.4 interruptions.
           </p>
           <div className="p-4 bg-[#faf8ff] rounded-2xl border border-[#dae2fd] text-[12px] space-y-2">
             <div className="flex justify-between">
@@ -147,14 +147,14 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({ metrics }) => 
         <div className="bg-white rounded-3xl p-6 border border-[#e2e7ff] shadow-xs">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="w-4 h-4 text-[#00685f]" />
-            <h3 className="text-base font-bold text-[#131b2e]">Autonomic Tone & Heart Rate Variability</h3>
+            <h3 className="text-base font-bold text-[#131b2e]">Heart Rate & Recovery Indicators</h3>
           </div>
           <p className="text-[13px] text-[#3d4947] leading-relaxed mb-4">
-            Morning parasympathetic dominance was sustained for 4.2 hours following Zone 2 cardio, suppressing cortisol spikes during the 11:15 AM Protocol Refactor sprint.
+            Morning cardio sustained your energy reserves throughout your focus sessions.
           </p>
           <div className="p-4 bg-[#eefaf8] rounded-2xl border border-[#a2e3d9] text-[12px] space-y-2">
             <div className="flex justify-between">
-              <span className="text-[#3d4947]">Peak HRV (Morning Plunge):</span>
+              <span className="text-[#3d4947]">Peak HRV:</span>
               <span className="font-bold text-[#00685f]">92 ms</span>
             </div>
             <div className="flex justify-between">
