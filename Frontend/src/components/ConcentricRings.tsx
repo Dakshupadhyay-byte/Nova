@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 import { RefreshCw, Info, ShieldCheck, ArrowUpRight } from 'lucide-react';
-import { MetricOverview } from '../types';
+import { MetricOverview, DailyHealthMetric } from '../types';
 
 interface ConcentricRingsProps {
   metrics: MetricOverview;
+  todayHealth?: DailyHealthMetric | null;
   onInspectBioData: () => void;
   onRefresh?: () => void;
 }
 
 export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
   metrics,
+  todayHealth,
   onInspectBioData,
   onRefresh,
 }) => {
   const [hoveredRing, setHoveredRing] = useState<'outer' | 'mid' | 'inner' | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const hasHealthData = todayHealth !== undefined && todayHealth !== null;
 
   // Concentric circle SVG properties
   const size = 260;
@@ -31,9 +35,9 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
   const innerCircumference = 2 * Math.PI * innerRadius;
 
   // Percentage values
-  const outerPct = metrics.sleepAlignmentPercent; // 81%
-  const midPct = metrics.exerciseBurnPercent;      // 84%
-  const innerPct = metrics.focusFlowPercent;       // 76%
+  const outerPct = 0; // Sleep Alignment - N/A (neutral)
+  const midPct = hasHealthData ? Math.min(100, Math.round((todayHealth.exercise_minutes / 30) * 100)) : 0; // Real Exercise vs 30m target
+  const innerPct = metrics.focusFlowPercent;       // Real Focus Flow 76%
 
   const outerDash = (outerPct / 100) * outerCircumference;
   const midDash = (midPct / 100) * midCircumference;
@@ -185,18 +189,18 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
             <span className="text-4xl font-extrabold text-[#00685f] tracking-tight tabular-nums leading-none">
               {hoveredRing === 'outer'
-                ? metrics.sleepAlignmentPercent
+                ? 'N/A'
                 : hoveredRing === 'mid'
-                ? metrics.exerciseBurnPercent
+                ? `${midPct}%`
                 : hoveredRing === 'inner'
-                ? metrics.focusFlowPercent
+                ? `${metrics.focusFlowPercent}%`
                 : metrics.focusIndex}
             </span>
             <span className="text-[10px] font-bold text-[#131b2e] tracking-wider mt-1 uppercase">
               {hoveredRing === 'outer'
-                ? 'SLEEP ALIGNMENT'
+                ? 'SLEEP (PENDING)'
                 : hoveredRing === 'mid'
-                ? 'BURN EFFICIENCY'
+                ? 'EXERCISE SYNC'
                 : hoveredRing === 'inner'
                 ? 'FLOW DURATION'
                 : 'FOCUS INDEX'}
@@ -237,7 +241,7 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
             </div>
           </div>
 
-          {/* Item 2: Exercise & Active Burn */}
+          {/* Item 2: Exercise & Active Movement */}
           <div
             onMouseEnter={() => setHoveredRing('mid')}
             onMouseLeave={() => setHoveredRing(null)}
@@ -250,18 +254,18 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]"></span>
-                <span className="text-[13.5px] font-bold text-[#131b2e]">Exercise & Active Burn</span>
+                <span className="text-[13.5px] font-bold text-[#131b2e]">Exercise & Active Movement</span>
                 <span className="px-2 py-0.5 rounded-md bg-[#e0f2fe] text-[#0284c7] text-[10px] font-bold tracking-wider">
                   MID RING
                 </span>
               </div>
               <span className="text-lg font-bold text-[#0284c7] tabular-nums">
-                {metrics.exerciseBurnPercent}%
+                {hasHealthData ? `${midPct}%` : '0%'}
               </span>
             </div>
             <div className="mt-1.5 flex items-center justify-between text-[11.5px] text-[#3d4947]">
-              <span>{metrics.exerciseMinutes} min · {metrics.exerciseCalories} kcal</span>
-              <span className="font-semibold text-[#131b2e]">105% of target</span>
+              <span>{hasHealthData ? `${todayHealth.exercise_minutes} min exercise · ${todayHealth.steps} steps` : 'No health data today'}</span>
+              <span className="font-semibold text-[#131b2e]">{hasHealthData ? `${Math.round(todayHealth.exercise_distance_meters)} m distance` : '30 min target'}</span>
             </div>
           </div>
 
@@ -284,12 +288,12 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
                 </span>
               </div>
               <span className="text-lg font-bold text-[#712ae2] tabular-nums">
-                {metrics.sleepAlignmentPercent}%
+                N/A
               </span>
             </div>
             <div className="mt-1.5 flex items-center justify-between text-[11.5px] text-[#3d4947]">
-              <span>{metrics.sleepHours}h recorded</span>
-              <span className="font-semibold text-[#131b2e]">Target {metrics.sleepGoalHours.toFixed(1)}h</span>
+              <span>Not available from Health Connect</span>
+              <span className="font-semibold text-[#131b2e]">Pending Sync</span>
             </div>
           </div>
         </div>

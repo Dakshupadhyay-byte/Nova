@@ -1,5 +1,12 @@
 export type NavTab = 'overview' | 'focus' | 'checkin' | 'analytics' | 'history' | 'settings' | 'login';
 
+export interface DailyHealthMetric {
+  date: string;
+  steps: number;
+  exercise_minutes: number;
+  exercise_distance_meters: number;
+}
+
 export interface FocusBlock {
   id: string;
   title: string;

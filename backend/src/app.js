@@ -87,6 +87,8 @@ app.use('/api/sessions',  sessionsRouter);
 app.use('/api/checkin',   checkinRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/auth',      authRouter);   // Google Sign-In authentication
+app.use('/api/health',    healthWebhookRouter);
+app.use('/api/ai',        aiRouter);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 // A simple endpoint for load balancers and uptime monitors.
