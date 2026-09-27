@@ -25,7 +25,9 @@ export const signInWithGoogle = async (): Promise<{ user: AuthStateUser; token: 
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
-    const token = await user.getIdToken();
+    
+    const token = await user.getIdToken(true);
+console.log("Bearer Token:", `Bearer ${token}`);
 
     return {
       user: {

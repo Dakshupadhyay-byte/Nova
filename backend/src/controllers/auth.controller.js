@@ -1,9 +1,10 @@
 // =============================================================================
-// src/controllers/auth.controller.js — Firebase Authentication User Sync
+// src/controllers/auth.controller.js — Firebase Auth & Webhook Key Management
 // =============================================================================
 
 'use strict';
 
+const crypto = require('crypto');
 const { verifyFirebaseToken } = require('../config/firebaseAdmin');
 const db = require('../config/db');
 
@@ -101,4 +102,85 @@ const googleAuth = async (req, res, next) => {
   }
 };
 
-module.exports = { googleAuth, syncUser: googleAuth };
+/**
+ * POST /api/auth/webhook-token
+ * Generates a long-lived Webhook API Key for the authenticated Firebase user.
+ * Hashes the key with SHA-256 before persisting, returning the plaintext key exactly once.
+ *
+ * Protected by authMiddleware (Firebase Authentication).
+ *
+ * @type {import('express').RequestHandler}
+ */
+const generateWebhookToken = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // 1. Revoke any existing active keys for this user
+    await db.query(
+      `UPDATE user_api_keys
+       SET revoked_at = NOW()
+       WHERE user_id = $1 AND revoked_at IS NULL`,
+      [userId]
+    );
+
+    // 2. Generate secure random token with prefix "nova_hk_"
+    const prefix = 'nova_hk_';
+    const randomHex = crypto.randomBytes(24).toString('hex');
+    const plaintextToken = `${prefix}${randomHex}`;
+
+    // 3. Compute SHA-256 hash
+    const keyHash = crypto.createHash('sha256').update(plaintextToken).digest('hex');
+
+    // 4. Store only the hash in user_api_keys
+    await db.query(
+      `INSERT INTO user_api_keys (user_id, key_hash, key_prefix)
+       VALUES ($1, $2, $3)`,
+      [userId, keyHash, prefix]
+    );
+
+    // Return plaintext token in response envelope
+    return res.status(200).json({
+      success: true,
+      token: plaintextToken,
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/webhook-token/revoke
+ * Revokes all active Webhook API Keys for the authenticated Firebase user.
+ *
+ * Protected by authMiddleware (Firebase Authentication).
+ *
+ * @type {import('express').RequestHandler}
+ */
+const revokeWebhookTokens = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const { rowCount } = await db.query(
+      `UPDATE user_api_keys
+       SET revoked_at = NOW()
+       WHERE user_id = $1 AND revoked_at IS NULL`,
+      [userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `${rowCount} webhook token(s) revoked successfully.`,
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  googleAuth,
+  syncUser: googleAuth,
+  generateWebhookToken,
+  revokeWebhookTokens,
+};
