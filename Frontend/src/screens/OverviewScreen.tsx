@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { WelcomeBanner } from '../components/WelcomeBanner';
 import { ConcentricRings } from '../components/ConcentricRings';
 import { WeeklyVelocityChart } from '../components/WeeklyVelocityChart';
@@ -12,7 +11,9 @@ import { NovaLogo } from '../components/NovaLogo';
 import { BioDataModal } from '../components/modals/BioDataModal';
 import { PatternDetailsModal } from '../components/modals/PatternDetailsModal';
 import { CircadianModal } from '../components/modals/CircadianModal';
-import { MetricOverview, FocusBlock } from '../types';
+import { MetricOverview, FocusBlock, DailyHealthMetric } from '../types';
+import { getDailyHealth } from '../services/api';
+import { getIdToken } from '../services/auth';
 
 interface OverviewScreenProps {
   metrics: MetricOverview;
@@ -37,6 +38,36 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
   const [isCircadianModalOpen, setIsCircadianModalOpen] = useState(false);
   const [isReminderSet, setIsReminderSet] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<FocusBlock | null>(null);
+
+  // Real backend health state
+  const [healthData, setHealthData] = useState<DailyHealthMetric[] | null>(null);
+  const [isLoadingHealth, setIsLoadingHealth] = useState(true);
+
+  // Fetch real daily health data from GET /api/health/daily
+  const fetchHealthData = async () => {
+    setIsLoadingHealth(true);
+    try {
+      const token = await getIdToken();
+      if (!token) {
+        setIsLoadingHealth(false);
+        return;
+      }
+      const data = await getDailyHealth(token);
+      setHealthData(data);
+    } catch {
+      // Non-blocking fallback
+    } finally {
+      setIsLoadingHealth(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHealthData();
+  }, []);
+
+  // Today's local date string in Asia/Kolkata timezone (YYYY-MM-DD)
+  const todayKolkataDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const todayHealth = healthData?.find(d => d.date === todayKolkataDate) || null;
 
   // Filter blocks by search query if user types in search bar
   const filteredBlocks = searchQuery.trim()
@@ -68,8 +99,9 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
         <div className="lg:col-span-7 space-y-6">
           <ConcentricRings
             metrics={metrics}
+            todayHealth={todayHealth}
             onInspectBioData={() => setIsBioModalOpen(true)}
-            onRefresh={() => {}}
+            onRefresh={fetchHealthData}
           />
 
           <WeeklyVelocityChart
@@ -83,6 +115,8 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <ExerciseCard
               metrics={metrics}
+              todayHealth={todayHealth}
+              isLoadingHealth={isLoadingHealth}
               onOpenDetails={() => setIsCircadianModalOpen(true)}
             />
             <SleepCard

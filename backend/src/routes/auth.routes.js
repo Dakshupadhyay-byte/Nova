@@ -1,15 +1,18 @@
 // =============================================================================
-// src/routes/auth.routes.js — Google Authentication Routes
+// src/routes/auth.routes.js — Google Authentication & Webhook Credentials Routes
 // =============================================================================
 //
 // Mounted in app.js as: app.use('/api/auth', authRouter)
-// So the path registered here ('/google') becomes: POST /api/auth/google
 // =============================================================================
 
 'use strict';
 
-const { Router }    = require('express');
-const { googleAuth } = require('../controllers/auth.controller');
+const { Router } = require('express');
+const {
+  googleAuth,
+  generateWebhookToken,
+  revokeWebhookTokens,
+} = require('../controllers/auth.controller');
 const authMiddleware = require('../middleware/authMiddleware');
 
 const router = Router();
@@ -27,5 +30,10 @@ router.get('/me', authMiddleware, (req, res) => {
   });
 });
 
-module.exports = router;
+// POST /api/auth/webhook-token → generates long-lived Webhook API Key
+router.post('/webhook-token', authMiddleware, generateWebhookToken);
 
+// POST /api/auth/webhook-token/revoke → revokes active Webhook API Keys
+router.post('/webhook-token/revoke', authMiddleware, revokeWebhookTokens);
+
+module.exports = router;

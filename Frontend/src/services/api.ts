@@ -136,3 +136,31 @@ export async function recordSession(
 
   return result.success;
 }
+
+export interface DailyHealthMetric {
+  date: string;
+  steps: number;
+  exercise_minutes: number;
+  exercise_distance_meters: number;
+}
+
+/**
+ * Fetch authenticated user daily health aggregates.
+ */
+export async function getDailyHealth(
+  token: string,
+  from?: string,
+  to?: string
+): Promise<DailyHealthMetric[] | null> {
+  const queryParams = new URLSearchParams();
+  if (from) queryParams.append('from', from);
+  if (to) queryParams.append('to', to);
+
+  const endpoint = `/health/daily${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  const result = await fetchWithAuth<DailyHealthMetric[]>(endpoint, token, {
+    method: 'GET',
+  });
+
+  return result.success && Array.isArray(result.data) ? result.data : null;
+}
+

@@ -32,11 +32,12 @@ const express = require('express');
 const cors    = require('cors');
 
 // Import our assembled route modules (each is an express.Router instance)
-const sessionsRouter  = require('./routes/sessions.routes');
-const checkinRouter   = require('./routes/checkin.routes');
+const sessionsRouter = require('./routes/sessions.routes');
+const checkinRouter = require('./routes/checkin.routes');
 const dashboardRouter = require('./routes/dashboard.routes');
-const authRouter      = require('./routes/auth.routes');
-const aiRouter        = require('./routes/ai.routes');
+const authRouter          = require('./routes/auth.routes');
+const healthWebhookRouter = require('./routes/healthWebhook.routes');
+const aiRouter            = require('./routes/ai.routes');
 
 // Import middleware
 const requestLogger = require('./middleware/requestLogger');
@@ -86,6 +87,7 @@ app.use('/api/sessions',  sessionsRouter);
 app.use('/api/checkin',   checkinRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/auth',      authRouter);   // Google Sign-In authentication
+app.use('/api/health',    healthWebhookRouter);
 app.use('/api/ai',        aiRouter);     // NOVA AI chat endpoint
 
 // ─── Health check ─────────────────────────────────────────────────────────────
