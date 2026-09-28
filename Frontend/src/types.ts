@@ -73,6 +73,8 @@ export interface BlueprintDay {
   rationale: string | null;
   status: 'pending' | 'completed' | 'skipped' | string;
   completedAt: string | null;
+  originalLogDate?: string | null;
+  rescheduledAt?: string | null;
   createdAt?: string;
   updatedAt?: string | null;
 }

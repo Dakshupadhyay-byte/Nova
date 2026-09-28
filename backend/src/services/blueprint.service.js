@@ -223,7 +223,8 @@ const getUserBlueprints = async (userId) => {
 
   // Query 2: Fetch blueprint days for user's blueprints (ordered by day_number ASC)
   const { rows: dayRows } = await db.query(
-    `SELECT d.id, d.blueprint_id, d.day_number, d.log_date, d.title, d.mission, d.rationale, d.status, d.completed_at, d.created_at, d.updated_at
+    `SELECT d.id, d.blueprint_id, d.day_number, d.log_date, d.title, d.mission, d.rationale,
+            d.status, d.completed_at, d.original_log_date, d.rescheduled_at, d.created_at, d.updated_at
      FROM blueprint_days d
      JOIN blueprints b ON d.blueprint_id = b.id
      WHERE b.user_id = $1
@@ -247,6 +248,8 @@ const getUserBlueprints = async (userId) => {
       rationale: d.rationale,
       status: d.status,
       completedAt: d.completed_at,
+      originalLogDate: d.original_log_date,
+      rescheduledAt: d.rescheduled_at,
       createdAt: d.created_at,
       updatedAt: d.updated_at,
     });
@@ -270,5 +273,85 @@ const getUserBlueprints = async (userId) => {
   });
 };
 
-module.exports = { createBlueprint, getUserBlueprints };
+/**
+ * Reschedules a pending blueprint mission to a new calendar date.
+ *
+ * @param {number} userId - Authenticated user ID (from req.user.id).
+ * @param {number} dayId - ID of the blueprint_day to reschedule.
+ * @param {string} newDate - Target date string in YYYY-MM-DD format.
+ * @returns {Promise<Object>} Updated blueprint day object.
+ */
+const rescheduleBlueprintDay = async (userId, dayId, newDate) => {
+  // 1. Verify day exists and belongs to a blueprint owned by the user
+  const { rows: dayRows } = await db.query(
+    `SELECT d.id, d.blueprint_id, d.day_number, d.log_date, d.title, d.mission, d.rationale,
+            d.status, d.completed_at, d.original_log_date, d.rescheduled_at, d.created_at, d.updated_at
+     FROM blueprint_days d
+     JOIN blueprints b ON d.blueprint_id = b.id
+     WHERE d.id = $1 AND b.user_id = $2`,
+    [dayId, userId]
+  );
+
+  if (dayRows.length === 0) {
+    const err = new Error('Roadmap mission not found or access denied.');
+    err.code = 'DAY_NOT_FOUND';
+    throw err;
+  }
+
+  const day = dayRows[0];
+
+  // 2. Only pending missions may be rescheduled
+  if (day.status !== 'pending') {
+    const err = new Error(`Only pending missions can be rescheduled. Current status: ${day.status}`);
+    err.code = 'MISSION_NOT_PENDING';
+    throw err;
+  }
+
+  // 3. Reject if date is already occupied by another mission in the same blueprint
+  const { rows: occupiedRows } = await db.query(
+    `SELECT id FROM blueprint_days
+     WHERE blueprint_id = $1 AND log_date = $2::DATE AND id != $3
+     LIMIT 1`,
+    [day.blueprint_id, newDate, dayId]
+  );
+
+  if (occupiedRows.length > 0) {
+    const err = new Error('A mission is already scheduled for this date in your roadmap.');
+    err.code = 'DATE_OCCUPIED';
+    throw err;
+  }
+
+  // 4. Update the day: preserve original_log_date on first reschedule, set new log_date
+  const { rows: updatedRows } = await db.query(
+    `UPDATE blueprint_days
+     SET log_date = $1::DATE,
+         original_log_date = COALESCE(original_log_date, log_date),
+         rescheduled_at = NOW(),
+         updated_at = NOW()
+     WHERE id = $2
+     RETURNING id, blueprint_id, day_number, log_date, title, mission, rationale,
+               status, completed_at, original_log_date, rescheduled_at, created_at, updated_at`,
+    [newDate, dayId]
+  );
+
+  const updated = updatedRows[0];
+
+  return {
+    id: Number(updated.id),
+    blueprintId: Number(updated.blueprint_id),
+    dayNumber: Number(updated.day_number),
+    logDate: updated.log_date,
+    title: updated.title,
+    mission: updated.mission,
+    rationale: updated.rationale,
+    status: updated.status,
+    completedAt: updated.completed_at,
+    originalLogDate: updated.original_log_date,
+    rescheduledAt: updated.rescheduled_at,
+    createdAt: updated.created_at,
+    updatedAt: updated.updated_at,
+  };
+};
+
+module.exports = { createBlueprint, getUserBlueprints, rescheduleBlueprintDay };
 

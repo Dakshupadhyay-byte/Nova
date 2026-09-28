@@ -285,11 +285,13 @@ CREATE TABLE IF NOT EXISTS blueprint_days (
     title        VARCHAR(255) NOT NULL,
     mission      TEXT         NOT NULL,
     rationale    TEXT,
-    status       VARCHAR(20)  NOT NULL DEFAULT 'pending' 
-                              CHECK (status IN ('pending', 'completed', 'skipped')),
-    completed_at TIMESTAMPTZ,
-    created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    status              VARCHAR(20)  NOT NULL DEFAULT 'pending' 
+                                     CHECK (status IN ('pending', 'completed', 'skipped')),
+    completed_at        TIMESTAMPTZ,
+    original_log_date   DATE,
+    rescheduled_at      TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
     CONSTRAINT uq_blueprint_day_number UNIQUE (blueprint_id, day_number),
     CONSTRAINT uq_blueprint_day_date   UNIQUE (blueprint_id, log_date),

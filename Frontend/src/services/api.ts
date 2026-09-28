@@ -192,4 +192,22 @@ export async function createBlueprint(
   });
 }
 
+/**
+ * Reschedule a pending roadmap mission to a new calendar date.
+ * PATCH /api/blueprints/days/:dayId/reschedule
+ */
+export async function rescheduleBlueprintDay(
+  token: string,
+  dayId: number,
+  newDate: string
+): Promise<{ success: boolean; data: { day: BlueprintDay } | null; error: any }> {
+  return fetchWithAuth<{ day: BlueprintDay }>(`/blueprints/days/${dayId}/reschedule`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      newDate,
+    }),
+  });
+}
+
+
 

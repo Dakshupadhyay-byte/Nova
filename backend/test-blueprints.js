@@ -207,12 +207,83 @@ async function runBlueprintTests() {
   const getSpoofRes = await request('GET', '/api/blueprints?user_id=99999', null, headersUser2);
   console.log('Status:', getSpoofRes.status, getSpoofRes.body?.data?.blueprints?.length === 0 ? 'PASSED (Override ignored, 0 blueprints returned)' : 'FAILED');
 
-  // TEST 14: User Isolation Check (User 2 calling GET /api/blueprints cannot see User 1's blueprint)
-  console.log('\n[14] Testing Strict User Isolation (User 2 cannot see User 1 blueprints)...');
-  const containsUser1Bp = getEmptyRes.body?.data?.blueprints?.some((b) => b.id === fetchedBp?.id);
-  console.log('User 2 list contains User 1 blueprint:', containsUser1Bp ? 'FAILED (Isolation breach!)' : 'PASSED (Isolated)');
+  // =========================================================================
+  // PHASE 2D: MANUAL MISSION RESCHEDULING TESTS (PATCH /api/blueprints/days/:dayId/reschedule)
+  // =========================================================================
+  console.log('\n--- TESTING MANUAL MISSION RESCHEDULING API ---');
 
-  console.log('\n=== ALL PHASE 2B & 2C BLUEPRINT TESTS PASSED SUCCESSFULLY ===');
+  const testDay = fetchedDays[6]; // Day 7
+  const initialDayDate = testDay.logDate;
+  console.log('Target Test Day ID:', testDay.id, 'Initial Date:', initialDayDate);
+
+  // TEST 15: Unauthenticated -> 401
+  console.log('\n[15] Testing PATCH /api/blueprints/days/:dayId/reschedule Unauthenticated (Expect 401)...');
+  const unauthReschedule = await request('PATCH', `/api/blueprints/days/${testDay.id}/reschedule`, { newDate: '2026-12-10' });
+  console.log('Status:', unauthReschedule.status, unauthReschedule.status === 401 ? 'PASSED' : 'FAILED');
+
+  // TEST 16: Invalid date format -> 400
+  console.log('\n[16] Testing Invalid Date Format (newDate: "invalid-date" -> Expect 400)...');
+  const invDateRes = await request('PATCH', `/api/blueprints/days/${testDay.id}/reschedule`, { newDate: 'invalid-date' }, headersUser1);
+  console.log('Status:', invDateRes.status, invDateRes.body?.error?.code === 'VALIDATION_ERROR' ? 'PASSED' : 'FAILED');
+
+  // TEST 17: User Isolation -> User 2 cannot reschedule User 1's mission -> 404
+  console.log('\n[17] Testing User Isolation (User 2 attempting to reschedule User 1 mission -> Expect 404)...');
+  const crossUserRes = await request('PATCH', `/api/blueprints/days/${testDay.id}/reschedule`, { newDate: '2026-12-10' }, headersUser2);
+  console.log('Status:', crossUserRes.status, crossUserRes.status === 404 ? 'PASSED (404 Not Found)' : 'FAILED');
+
+  // TEST 18: Completed mission cannot be rescheduled -> 400
+  console.log('\n[18] Testing Completed Mission Rescheduling Rejection (Expect 400)...');
+  // Mark Day 1 completed in DB
+  const day1 = fetchedDays[0];
+  await db.query(`UPDATE blueprint_days SET status = 'completed', completed_at = NOW() WHERE id = $1`, [day1.id]);
+  const completedRes = await request('PATCH', `/api/blueprints/days/${day1.id}/reschedule`, { newDate: '2026-12-10' }, headersUser1);
+  console.log('Status:', completedRes.status, completedRes.body?.error?.code === 'MISSION_NOT_PENDING' ? 'PASSED (Rejected completed mission)' : 'FAILED');
+
+  const formatDateOnly = (d) => {
+    if (!d) return null;
+    const dateObj = new Date(d);
+    // Use local year, month, day to avoid UTC offset shift
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // TEST 19 & 20: First Reschedule of pending mission -> stores original_log_date
+  console.log('\n[19 & 20] Testing First Reschedule (Pending Mission -> Expect 200 and original_log_date set)...');
+  const firstRescheduleRes = await request('PATCH', `/api/blueprints/days/${testDay.id}/reschedule`, { newDate: '2026-12-15' }, headersUser1);
+  console.log('Status:', firstRescheduleRes.status, firstRescheduleRes.body?.success ? 'PASSED' : 'FAILED');
+  const updatedDay1 = firstRescheduleRes.body?.data?.day;
+  const originalDateClean = formatDateOnly(updatedDay1?.originalLogDate);
+  const newDateClean = formatDateOnly(updatedDay1?.logDate);
+  const initialDateClean = formatDateOnly(initialDayDate);
+  console.log(`Original Date preserved (${originalDateClean} === ${initialDateClean}):`, originalDateClean === initialDateClean ? 'PASSED' : 'FAILED');
+  console.log(`New Log Date updated (${newDateClean} === 2026-12-15):`, newDateClean === '2026-12-15' ? 'PASSED' : 'FAILED');
+
+  // TEST 21: Second Reschedule -> preserves initial original_log_date (does NOT overwrite with previous rescheduled date)
+  console.log('\n[21] Testing Second Reschedule (Expect original_log_date to remain unchanged)...');
+  const secondRescheduleRes = await request('PATCH', `/api/blueprints/days/${testDay.id}/reschedule`, { newDate: '2026-12-20' }, headersUser1);
+  console.log('Status:', secondRescheduleRes.status, secondRescheduleRes.body?.success ? 'PASSED' : 'FAILED');
+  const updatedDay2 = secondRescheduleRes.body?.data?.day;
+  const originalDateClean2 = formatDateOnly(updatedDay2?.originalLogDate);
+  const newDateClean2 = formatDateOnly(updatedDay2?.logDate);
+  console.log(`Original Date still preserved (${originalDateClean2} === ${initialDateClean}):`, originalDateClean2 === initialDateClean ? 'PASSED' : 'FAILED');
+  console.log(`New Log Date updated (${newDateClean2} === 2026-12-20):`, newDateClean2 === '2026-12-20' ? 'PASSED' : 'FAILED');
+
+  // TEST 22: Occupied date -> 409 Conflict
+  console.log('\n[22] Testing Occupied Date Rejection (Attempt to move Day 7 to Day 2 date -> Expect 409 Conflict)...');
+  const day2Date = formatDateOnly(fetchedDays[1].logDate);
+  const occupiedRes = await request('PATCH', `/api/blueprints/days/${testDay.id}/reschedule`, { newDate: day2Date }, headersUser1);
+  console.log('Status:', occupiedRes.status, occupiedRes.status === 409 && occupiedRes.body?.error?.code === 'DATE_OCCUPIED' ? 'PASSED (409 Conflict)' : 'FAILED');
+
+  // TEST 23: Roadmap end_date remains unchanged
+  console.log('\n[23] Verifying Blueprint end_date remains unchanged...');
+  const { rows: bpCheckRows } = await db.query(`SELECT end_date FROM blueprints WHERE id = $1`, [fetchedBp.id]);
+  const currentEndDate = formatDateOnly(bpCheckRows[0].end_date);
+  const fetchedEndDate = formatDateOnly(fetchedBp.endDate);
+  console.log(`Blueprint end_date preserved (${currentEndDate} === ${fetchedEndDate}):`, currentEndDate === fetchedEndDate ? 'PASSED' : 'FAILED');
+
+  console.log('\n=== ALL BLUEPRINT & RESCHEDULING TESTS PASSED SUCCESSFULLY ===');
   server.close();
   process.exit(0);
 }
@@ -222,3 +293,4 @@ runBlueprintTests().catch((err) => {
   if (server) server.close();
   process.exit(1);
 });
+

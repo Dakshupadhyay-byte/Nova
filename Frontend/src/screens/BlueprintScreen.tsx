@@ -11,7 +11,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { getIdToken } from '../services/auth';
-import { getBlueprints, createBlueprint } from '../services/api';
+import { getBlueprints, createBlueprint, rescheduleBlueprintDay } from '../services/api';
 import { Blueprint, BlueprintDay } from '../types';
 import { NovaLogo } from '../components/NovaLogo';
 
@@ -27,6 +27,12 @@ export const BlueprintScreen: React.FC = () => {
   const [customDurationInput, setCustomDurationInput] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Rescheduling state
+  const [reschedulingDayId, setReschedulingDayId] = useState<number | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState<string>('');
+  const [isRescheduling, setIsRescheduling] = useState<boolean>(false);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
 
   // Fetch blueprints on mount
   const loadBlueprints = useCallback(async () => {
@@ -55,6 +61,57 @@ export const BlueprintScreen: React.FC = () => {
       setIsLoading(false);
     }
   }, []);
+
+  // Reschedule handlers
+  const handleStartReschedule = (day: BlueprintDay) => {
+    setReschedulingDayId(day.id);
+    const cleanDate = day.logDate ? String(day.logDate).split('T')[0] : '';
+    setRescheduleDate(cleanDate);
+    setRescheduleError(null);
+  };
+
+  const handleCancelReschedule = () => {
+    setReschedulingDayId(null);
+    setRescheduleDate('');
+    setRescheduleError(null);
+  };
+
+  const handleConfirmReschedule = async (dayId: number) => {
+    if (!rescheduleDate) {
+      setRescheduleError('Please choose a date.');
+      return;
+    }
+    setRescheduleError(null);
+    setIsRescheduling(true);
+
+    try {
+      const token = await getIdToken();
+      if (!token) {
+        setRescheduleError('Authentication required. Please log in again.');
+        setIsRescheduling(false);
+        return;
+      }
+
+      const result = await rescheduleBlueprintDay(token, dayId, rescheduleDate);
+      if (result.success) {
+        setReschedulingDayId(null);
+        setRescheduleDate('');
+        await loadBlueprints();
+      } else {
+        const errCode = result.error?.code;
+        if (errCode === 'DATE_OCCUPIED') {
+          setRescheduleError('A mission is already scheduled for this date in your roadmap.');
+        } else {
+          setRescheduleError(result.error?.message || 'Failed to reschedule mission.');
+        }
+      }
+    } catch (err: any) {
+      console.error('[RESCHEDULE ERROR]', err);
+      setRescheduleError('Network error while rescheduling. Please try again.');
+    } finally {
+      setIsRescheduling(false);
+    }
+  };
 
   useEffect(() => {
     loadBlueprints();
@@ -347,17 +404,24 @@ export const BlueprintScreen: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        {formattedDate && (
-                          <div className="flex items-center gap-1.5 text-[12px] text-[#00685f] font-semibold font-mono mt-0.5">
-                            <Calendar className="w-3.5 h-3.5 text-[#00685f]/80" />
-                            <span>{formattedDate}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                          {formattedDate && (
+                            <div className="flex items-center gap-1.5 text-[12px] text-[#00685f] font-semibold font-mono">
+                              <Calendar className="w-3.5 h-3.5 text-[#00685f]/80" />
+                              <span>{formattedDate}</span>
+                            </div>
+                          )}
+                          {day.originalLogDate && String(day.originalLogDate).split('T')[0] !== cleanLogDate && (
+                            <span className="text-[11px] text-[#6d7a77] italic bg-[#faf8ff] px-2 py-0.5 rounded-md border border-[#e2e7ff]">
+                              Rescheduled from {formatDayDate(day.originalLogDate)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Status Badge */}
-                    <div className="shrink-0 self-start sm:self-auto">
+                    {/* Status Badge & Reschedule Action */}
+                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto flex-wrap justify-end">
                       {isCompleted ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11.5px] font-bold">
                           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -377,8 +441,60 @@ export const BlueprintScreen: React.FC = () => {
                           <span>Pending</span>
                         </span>
                       )}
+
+                      {/* Reschedule Button for pending missions */}
+                      {!isCompleted && !isSkipped && reschedulingDayId !== day.id && (
+                        <button
+                          onClick={() => handleStartReschedule(day)}
+                          title="Reschedule this mission"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#dae2fd] bg-white hover:bg-[#e2f5f1] hover:border-[#99dfd5] text-[#00685f] text-[11.5px] font-semibold transition-colors cursor-pointer shadow-2xs"
+                        >
+                          <Calendar className="w-3 h-3" />
+                          <span>Reschedule</span>
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  {/* Inline Reschedule Form */}
+                  {reschedulingDayId === day.id && (
+                    <div className="mt-3 p-3.5 rounded-xl bg-[#faf8ff] border border-[#dae2fd] space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[12px] font-bold text-[#131b2e]">Select New Date:</span>
+                          <input
+                            type="date"
+                            value={rescheduleDate}
+                            onChange={(e) => {
+                              setRescheduleDate(e.target.value);
+                              setRescheduleError(null);
+                            }}
+                            disabled={isRescheduling}
+                            className="px-2.5 py-1 text-[12px] rounded-lg border border-[#dae2fd] bg-white text-[#131b2e] focus:outline-hidden focus:border-[#00685f]"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleConfirmReschedule(day.id)}
+                            disabled={isRescheduling || !rescheduleDate}
+                            className="px-3 py-1 rounded-lg bg-[#00685f] hover:bg-[#005049] disabled:bg-[#dae2fd] text-white text-[12px] font-bold transition-colors cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            {isRescheduling ? 'Saving...' : 'Confirm'}
+                          </button>
+                          <button
+                            onClick={handleCancelReschedule}
+                            disabled={isRescheduling}
+                            className="px-2.5 py-1 rounded-lg border border-[#dae2fd] bg-white hover:bg-[#f0f2fd] text-[#3d4947] text-[12px] font-medium transition-colors cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                      {rescheduleError && (
+                        <div className="text-[11.5px] text-rose-600 font-medium">{rescheduleError}</div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Mission Description */}
                   <div className="space-y-2 mt-3 pt-3 border-t border-[#f0f3fd]">

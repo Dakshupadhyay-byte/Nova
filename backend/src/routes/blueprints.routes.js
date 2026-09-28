@@ -11,7 +11,7 @@
 'use strict';
 
 const { Router }                       = require('express');
-const { createBlueprint, getBlueprints } = require('../controllers/blueprints.controller');
+const { createBlueprint, getBlueprints, rescheduleBlueprintDay } = require('../controllers/blueprints.controller');
 const authMiddleware                   = require('../middleware/authMiddleware');
 
 const router = Router();
@@ -23,6 +23,10 @@ router.get('/', authMiddleware, getBlueprints);
 // POST /api/blueprints
 // Requires valid Firebase ID token. Generates multi-day roadmap with Gemini.
 router.post('/', authMiddleware, createBlueprint);
+
+// PATCH /api/blueprints/days/:dayId/reschedule
+// Reschedules a pending roadmap mission to a new calendar date.
+router.patch('/days/:dayId/reschedule', authMiddleware, rescheduleBlueprintDay);
 
 module.exports = router;
 

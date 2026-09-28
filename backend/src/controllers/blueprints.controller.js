@@ -191,5 +191,101 @@ const getBlueprints = async (req, res, next) => {
   }
 };
 
-module.exports = { createBlueprint, getBlueprints };
+/**
+ * PATCH /api/blueprints/days/:dayId/reschedule
+ *
+ * Authenticated endpoint to manually reschedule a pending roadmap mission to another date.
+ */
+const rescheduleBlueprintDay = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authentication token required.',
+        },
+      });
+    }
+
+    const { dayId } = req.params;
+    const parsedDayId = Number(dayId);
+    if (!Number.isInteger(parsedDayId) || parsedDayId <= 0) {
+      return sendValidationError(res, 'dayId', 'dayId must be a valid positive integer.');
+    }
+
+    const { newDate } = req.body || {};
+
+    if (!newDate || typeof newDate !== 'string') {
+      return sendValidationError(res, 'newDate', 'newDate is required and must be a string.');
+    }
+
+    const trimmedDate = newDate.trim();
+    // Validate strict YYYY-MM-DD format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(trimmedDate)) {
+      return sendValidationError(res, 'newDate', 'newDate must be in YYYY-MM-DD format.');
+    }
+
+    const [y, m, d] = trimmedDate.split('-').map(Number);
+    const parsedDate = new Date(Date.UTC(y, m - 1, d));
+    if (
+      isNaN(parsedDate.getTime()) ||
+      parsedDate.getUTCFullYear() !== y ||
+      parsedDate.getUTCMonth() !== m - 1 ||
+      parsedDate.getUTCDate() !== d
+    ) {
+      return sendValidationError(res, 'newDate', 'newDate must be a valid calendar date.');
+    }
+
+    const updatedDay = await blueprintService.rescheduleBlueprintDay(userId, parsedDayId, trimmedDate);
+
+    return res.status(200).json({
+      success: true,
+      data: { day: updatedDay },
+      error: null,
+    });
+
+  } catch (err) {
+    if (err.code === 'DAY_NOT_FOUND') {
+      return res.status(404).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'DAY_NOT_FOUND',
+          message: err.message,
+        },
+      });
+    }
+
+    if (err.code === 'MISSION_NOT_PENDING') {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'MISSION_NOT_PENDING',
+          message: err.message,
+        },
+      });
+    }
+
+    if (err.code === 'DATE_OCCUPIED') {
+      return res.status(409).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'DATE_OCCUPIED',
+          message: err.message,
+        },
+      });
+    }
+
+    next(err);
+  }
+};
+
+module.exports = { createBlueprint, getBlueprints, rescheduleBlueprintDay };
+
 
