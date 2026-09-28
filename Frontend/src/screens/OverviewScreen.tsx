@@ -8,6 +8,7 @@ import { NovaNoticedCard } from '../components/NovaNoticedCard';
 import { NovaAICard } from '../components/NovaAICard';
 import { FocusActivityList } from '../components/FocusActivityList';
 import { NovaLogo } from '../components/NovaLogo';
+import { WhatIfSimulatorCard } from '../components/WhatIfSimulatorCard';
 import { BioDataModal } from '../components/modals/BioDataModal';
 import { PatternDetailsModal } from '../components/modals/PatternDetailsModal';
 import { CircadianModal } from '../components/modals/CircadianModal';
@@ -21,6 +22,7 @@ interface OverviewScreenProps {
   onStartFocus: () => void;
   onViewFullLogbook: () => void;
   onOpenNovaAI: () => void;
+  onOpenSimulator: () => void;
   searchQuery: string;
 }
 
@@ -30,6 +32,7 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
   onStartFocus,
   onViewFullLogbook,
   onOpenNovaAI,
+  onOpenSimulator,
   searchQuery,
 }) => {
   const [timeframe, setTimeframe] = useState<'today' | '7days' | 'cycles'>('today');
@@ -131,6 +134,9 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
             onSetWindDownReminder={handleSetWindDownReminder}
             isReminderSet={isReminderSet}
           />
+
+          {/* What-If Simulator Card */}
+          <WhatIfSimulatorCard onOpenSimulator={onOpenSimulator} />
 
           {/* Today's Focus Activity Card */}
           <FocusActivityList

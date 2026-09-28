@@ -16,6 +16,7 @@ import { AnalyticsScreen } from './screens/AnalyticsScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { NovaAIScreen } from './screens/NovaAIScreen';
+import { SimulatorScreen } from './screens/SimulatorScreen';
 import { LoginScreen, AuthenticatedUser } from './screens/LoginScreen';
 import { LandingPage } from './screens/landing/LandingPage';
 import {
@@ -61,7 +62,7 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
         const token = await getIdToken();
         if (!token) return;
         const dashboard = await getDashboard(token);
-        const sleepHours = dashboard?.today?.sleepHours;
+        const sleepHours = dashboard?.today?.sleepHours ?? dashboard?.recentWellness?.[0]?.sleepHours;
         if (isMounted && sleepHours != null) {
           setMetrics((prev) => ({
             ...prev,
@@ -118,13 +119,14 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header user={currentUser} onSearch={q => setSearchQuery(q)} onOpenSettings={() => setCurrentTab('settings')} onLockTerminal={handleLockTerminal} />
         <main className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-16">
-          {currentTab === 'overview' && <OverviewScreen metrics={metrics} focusBlocks={focusBlocks} onStartFocus={() => setCurrentTab('focus')} onViewFullLogbook={() => setCurrentTab('history')} onOpenNovaAI={() => setCurrentTab('nova-ai')} searchQuery={searchQuery} />}
+          {currentTab === 'overview' && <OverviewScreen metrics={metrics} focusBlocks={focusBlocks} onStartFocus={() => setCurrentTab('focus')} onViewFullLogbook={() => setCurrentTab('history')} onOpenNovaAI={() => setCurrentTab('nova-ai')} onOpenSimulator={() => setCurrentTab('simulator')} searchQuery={searchQuery} />}
           {currentTab === 'focus' && <FocusScreen onBackToOverview={() => setCurrentTab('overview')} onSessionComplete={handleSessionComplete} />}
           {currentTab === 'checkin' && <CheckInScreen metrics={metrics} onUpdateMetrics={handleUpdateMetrics} onGoToOverview={() => setCurrentTab('overview')} />}
           {currentTab === 'analytics' && <AnalyticsScreen metrics={metrics} />}
           {currentTab === 'history' && <HistoryScreen focusBlocks={focusBlocks} />}
           {currentTab === 'settings' && <SettingsScreen user={currentUser} />}
           {currentTab === 'nova-ai' && <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden"><NovaAIScreen /></div>}
+          {currentTab === 'simulator' && <SimulatorScreen onBack={() => setCurrentTab('overview')} />}
         </main>
       </div>
     </div>
