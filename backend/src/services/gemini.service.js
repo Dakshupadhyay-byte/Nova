@@ -46,29 +46,54 @@ const MAX_OUTPUT_TOKENS = 512;
 //   • NOVA does not make causal claims — it uses hedged language
 //   • NOVA does not give medical advice
 const NOVA_SYSTEM_INSTRUCTIONS = `
-You are NOVA, an AI companion inside a personal focus and wellness app.
+You are NOVA, an AI companion inside a personal focus, wellness, and roadmap app.
 
 Your role:
-- Help the user reflect on their focus sessions and wellness habits.
+- Help the user reflect on their focus sessions, wellness habits, and daily Roadmap missions.
 - Keep responses concise (2–4 sentences unless more is clearly needed).
 - Be conversational, calm, and non-judgmental.
 - Be honest about what you know and don't know about the user.
 
-Data rules (strict):
-- You will receive a small context object containing only the user's real,
-  recorded data for this request. Use only what is in that context.
-- If a piece of data is absent from the context, say so honestly.
-  Do NOT invent numbers, trends, or habits.
-- When discussing relationships between sleep, energy, or focus, use hedged
-  language: "tends to", "appears associated with", "you might notice".
-  Never say one thing "causes" another.
-- Do not provide medical diagnoses or clinical advice.
-- Do not reference any data that is not present in the context you received.
+Roadmap Action Rules (strict):
+- You can understand and assist with the user's active Roadmap missions.
+- When the user explicitly requests to reschedule/move a single Roadmap mission (e.g. "Move today's mission to tomorrow", "Reschedule Day 3 to Friday", "Move mission 4 to 2026-10-01"):
+  1. Identify the specific pending mission from the user's active Roadmap context.
+  2. If the mission is completed or skipped, DO NOT propose rescheduling it. Explain why in your reply and set "action": null.
+  3. Calculate the target date in YYYY-MM-DD format based on the "Current date" in context.
+  4. Ensure target date is not already occupied by another day in the Roadmap. If occupied, DO NOT propose an action, explain in your reply, and set "action": null.
+  5. If valid, set "action" to:
+     {
+       "type": "RESCHEDULE_ROADMAP_DAY",
+       "dayId": <number>,
+       "dayNumber": <number>,
+       "missionTitle": "<string>",
+       "currentDate": "<YYYY-MM-DD>",
+       "targetDate": "<YYYY-MM-DD>"
+     }
+- If the user's request is ambiguous (e.g. "Move it", "Change my plan"), ask a clarifying question in your reply and set "action": null.
+- If the user asks to shift or move multiple missions (e.g. "Shift all remaining days by 2 days"), explain that Phase 1 only supports single mission rescheduling, and set "action": null.
+- If the user has no active Roadmap, state that and set "action": null.
+- For all other questions or general conversation, set "action": null.
 
-Tone rules:
-- Supportive and pragmatic — not overly enthusiastic.
-- Brief. Do not over-explain.
-- Do not use excessive emojis or exclamation marks.
+Data rules (strict):
+- You will receive a context object containing only the user's real, recorded data for this request. Use only what is in that context.
+- If a piece of data is absent from the context, say so honestly. Do NOT invent numbers, trends, or habits.
+- When discussing relationships between sleep, energy, or focus, use hedged language: "tends to", "appears associated with", "you might notice". Never say one thing "causes" another.
+- Do not provide medical diagnoses or clinical advice.
+
+Output Format:
+You MUST ALWAYS respond with a valid raw JSON object matching:
+{
+  "reply": "Your conversational text response to the user",
+  "action": null | {
+    "type": "RESCHEDULE_ROADMAP_DAY",
+    "dayId": number,
+    "dayNumber": number,
+    "missionTitle": string,
+    "currentDate": "YYYY-MM-DD",
+    "targetDate": "YYYY-MM-DD"
+  }
+}
 `.trim();
 
 // ─── Lazy initialization ──────────────────────────────────────────────────────
@@ -104,17 +129,12 @@ const getClient = () => {
 
 /**
  * Sends a user message to Gemini with the NOVA system instructions and a
- * pre-built, allowlisted context object, then returns the response text.
- *
- * The context object is serialized into a structured preamble that is prepended
- * to the user's message. This keeps the user message and context clearly
- * separated in the prompt.
+ * pre-built, allowlisted context object, then returns the structured { reply, action } object.
  *
  * @param {string} userMessage   - The raw user message (already validated by the controller).
  * @param {Object} selectedContext - The minimal, allowlisted context object produced
  *                                   by aiContext.service.selectRelevantContext().
- *                                   This function is intentionally unaware of its source.
- * @returns {Promise<string>}      - The response text from Gemini.
+ * @returns {Promise<{ reply: string, action: Object|null }>} - Structured AI response.
  * @throws {{ code: string, message: string }} - A normalized internal error, safe to log.
  */
 const sendMessage = async (userMessage, selectedContext) => {
@@ -133,6 +153,31 @@ const sendMessage = async (userMessage, selectedContext) => {
   const currentDate = selectedContext.currentDate || selectedContext.temporalContext?.currentDate;
   if (currentDate) {
     contextLines.push(`Current date: ${currentDate}`);
+  }
+
+  // Roadmap Context
+  if (selectedContext.roadmap) {
+    const rm = selectedContext.roadmap;
+    contextLines.push(
+      `Active Roadmap (ID ${rm.id}): "${rm.title}" | Goal: "${rm.outcome}" | ${rm.durationDays} days (${rm.startDate} to ${rm.endDate})`
+    );
+    if (rm.todayMission) {
+      contextLines.push(
+        `Today's Roadmap Mission (Day ${rm.todayMission.dayNumber}, Day ID ${rm.todayMission.id}): "${rm.todayMission.title}" - Mission: "${rm.todayMission.mission}" [Status: ${rm.todayMission.status}]`
+      );
+    } else {
+      contextLines.push(`Today's Roadmap Mission: None scheduled for current date (${rm.currentDate}).`);
+    }
+    const daysSummary = rm.days.map((d) => {
+      let desc = `Day ${d.dayNumber} (ID ${d.id}, Date: ${d.date}, Status: ${d.status}): "${d.title}" - "${d.mission}"`;
+      if (d.originalDate && d.originalDate !== d.date) {
+        desc += ` [Rescheduled from ${d.originalDate}]`;
+      }
+      return desc;
+    });
+    contextLines.push(`Roadmap Days List:\n  ${daysSummary.join('\n  ')}`);
+  } else {
+    contextLines.push(`Active Roadmap: None.`);
   }
 
   // Wellness
@@ -212,8 +257,7 @@ const sendMessage = async (userMessage, selectedContext) => {
       config: {
         systemInstruction: NOVA_SYSTEM_INSTRUCTIONS,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
-        // thinkingBudget: 0 — disable thinking for low-latency conversational use.
-        // gemini-2.5-flash has thinking ON by default; we turn it off for speed.
+        responseMimeType: 'application/json',
         thinkingConfig: { thinkingLevel: 'MINIMAL' },
       },
     });
@@ -233,7 +277,6 @@ const sendMessage = async (userMessage, selectedContext) => {
   }
 
   // Extract the text from the response.
-  // response.text is the convenience accessor documented in @google/genai.
   const text = response.text;
   if (!text || typeof text !== 'string' || text.trim() === '') {
     console.error('[AI] Gemini returned an empty or non-text response.');
@@ -242,8 +285,25 @@ const sendMessage = async (userMessage, selectedContext) => {
     throw err;
   }
 
-  console.log('[AI] Gemini response received successfully.');
-  return text.trim();
+  let parsed;
+  try {
+    const cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+    parsed = JSON.parse(cleanedText);
+  } catch {
+    // Graceful fallback if non-JSON text was returned
+    parsed = { reply: text.trim(), action: null };
+  }
+
+  const reply = typeof parsed.reply === 'string' && parsed.reply.trim() !== ''
+    ? parsed.reply.trim()
+    : text.trim();
+
+  const action = (parsed.action && typeof parsed.action === 'object' && parsed.action.type === 'RESCHEDULE_ROADMAP_DAY')
+    ? parsed.action
+    : null;
+
+  console.log('[AI] Gemini response received successfully (action=%s).', action ? action.type : 'none');
+  return { reply, action };
 };
 
 /**

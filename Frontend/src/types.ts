@@ -117,3 +117,14 @@ export interface SimulationResult {
   insight: string;
 }
 
+// ─── AI Roadmap Action Types ───────────────────────────────────────────────────
+
+export interface RoadmapAIAction {
+  type: 'RESCHEDULE_ROADMAP_DAY';
+  dayId: number;
+  dayNumber: number;
+  missionTitle: string;
+  currentDate: string;
+  targetDate: string;
+}
+

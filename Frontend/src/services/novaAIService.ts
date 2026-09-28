@@ -9,6 +9,7 @@
 // =============================================================================
 
 import { getIdToken } from './auth';
+import { RoadmapAIAction } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -17,11 +18,15 @@ export interface AIMessage {
   role: 'user' | 'nova';
   content: string;
   timestamp: Date;
+  action?: RoadmapAIAction | null;
+  actionState?: 'pending' | 'loading' | 'confirmed' | 'cancelled' | 'error';
+  actionError?: string | null;
 }
 
 export interface AIChatResponse {
   success: boolean;
   reply: string | null;
+  action: RoadmapAIAction | null;
   error: string | null;
 }
 
@@ -38,6 +43,7 @@ export async function sendMessage(message: string): Promise<AIChatResponse> {
       return {
         success: false,
         reply: null,
+        action: null,
         error: 'You must be signed in to use NOVA AI.',
       };
     }
@@ -55,15 +61,21 @@ export async function sendMessage(message: string): Promise<AIChatResponse> {
 
     if (!response.ok || !json.success) {
       const errMsg = json?.error?.message || 'NOVA AI is unavailable. Please try again.';
-      return { success: false, reply: null, error: errMsg };
+      return { success: false, reply: null, action: null, error: errMsg };
     }
 
-    return { success: true, reply: json.data.reply, error: null };
+    return {
+      success: true,
+      reply: json.data.reply,
+      action: json.data.action || null,
+      error: null,
+    };
   } catch (err: any) {
     console.error('[NOVA AI SERVICE]', err?.message || err);
     return {
       success: false,
       reply: null,
+      action: null,
       error: "I couldn't reach NOVA AI right now. Please check your connection and try again.",
     };
   }
@@ -76,10 +88,10 @@ export function createMessageId(): string {
 
 /** Suggested starter prompts shown in the empty state */
 export const SUGGESTED_PROMPTS = [
+  'What is my Roadmap mission today?',
+  'Move today\'s Roadmap mission to tomorrow',
   'How was my focus this week?',
   'Does my sleep affect my focus?',
   'What days am I most productive?',
   'What is my average energy level?',
-  'How many focus sessions have I completed?',
-  'Give me one suggestion for today.',
 ] as const;

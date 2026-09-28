@@ -164,7 +164,7 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
           {currentTab === 'checkin' && <CheckInScreen metrics={metrics} onUpdateMetrics={handleUpdateMetrics} onGoToOverview={() => handleSelectTab('overview')} />}
           {currentTab === 'analytics' && <AnalyticsScreen metrics={metrics} />}
           {currentTab === 'history' && <HistoryScreen focusBlocks={focusBlocks} />}
-          {currentTab === 'blueprint' && <BlueprintScreen />}
+          {currentTab === 'blueprint' && <BlueprintScreen onOpenNovaAI={() => handleSelectTab('nova-ai')} />}
           {currentTab === 'settings' && <SettingsScreen user={currentUser} />}
           {currentTab === 'nova-ai' && <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden"><NovaAIScreen /></div>}
           {currentTab === 'simulator' && <SimulatorScreen onBack={() => handleSelectTab('overview')} />}

@@ -15,7 +15,11 @@ import { getBlueprints, createBlueprint, rescheduleBlueprintDay } from '../servi
 import { Blueprint, BlueprintDay } from '../types';
 import { NovaLogo } from '../components/NovaLogo';
 
-export const BlueprintScreen: React.FC = () => {
+interface BlueprintScreenProps {
+  onOpenNovaAI?: () => void;
+}
+
+export const BlueprintScreen: React.FC<BlueprintScreenProps> = ({ onOpenNovaAI }) => {
   // Screen data state
   const [activeBlueprint, setActiveBlueprint] = useState<Blueprint | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -115,6 +119,15 @@ export const BlueprintScreen: React.FC = () => {
 
   useEffect(() => {
     loadBlueprints();
+
+    const handleRoadmapUpdated = () => {
+      loadBlueprints();
+    };
+
+    window.addEventListener('nova_roadmap_updated', handleRoadmapUpdated);
+    return () => {
+      window.removeEventListener('nova_roadmap_updated', handleRoadmapUpdated);
+    };
   }, [loadBlueprints]);
 
   // Handle preset duration select
@@ -343,6 +356,36 @@ export const BlueprintScreen: React.FC = () => {
               />
             </div>
           </div>
+        </div>
+
+        {/* AI Roadmap Assistant Callout */}
+        <div className="bg-gradient-to-r from-[#f7f5ff] to-[#f0fbf9] rounded-2xl p-4 sm:p-5 border border-[#e2e7ff] mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white border border-[#dae2fd] flex items-center justify-center shrink-0 shadow-xs">
+              <Sparkles className="w-4 h-4 text-[#7C5CFC]" />
+            </div>
+            <div>
+              <p className="text-[13.5px] font-bold text-[#131b2e]">
+                Need to adjust your Roadmap?
+              </p>
+              <p className="text-[12px] text-[#6d7a77]">
+                Ask NOVA AI to reschedule or move any upcoming mission using natural language.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if (onOpenNovaAI) {
+                onOpenNovaAI();
+              } else {
+                window.location.href = '/nova-ai';
+              }
+            }}
+            className="px-4 py-2 rounded-xl bg-[#7C5CFC] hover:bg-[#6b4de6] text-white text-[12.5px] font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0 self-start sm:self-auto cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Ask NOVA AI</span>
+          </button>
         </div>
 
         {/* Daily Roadmap Timeline */}

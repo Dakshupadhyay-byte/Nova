@@ -42,6 +42,7 @@ const buildDbContext = async (userId) => {
     todayHealthResult,
     health7dResult,
     currentDateResult,
+    activeRoadmapResult,
   ] = await Promise.all([
     // Q1: User name (select only name, omit email/google_id/timestamps)
     db.query(
@@ -126,6 +127,17 @@ const buildDbContext = async (userId) => {
 
     // Q9: Current database date
     db.query(`SELECT CURRENT_DATE::TEXT AS current_date`),
+
+    // Q10: Active Roadmap for user
+    db.query(
+      `SELECT id, title, outcome, duration_days, start_date::TEXT AS start_date,
+              end_date::TEXT AS end_date, status
+       FROM blueprints
+       WHERE user_id = $1 AND status = 'active'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [userId]
+    ),
   ]);
 
   const context = {};
@@ -144,7 +156,64 @@ const buildDbContext = async (userId) => {
     context.temporalContext = { currentDate };
   }
 
-  // 3. Wellness
+  // 3. Roadmap context
+  const activeBpRow = activeRoadmapResult?.rows[0];
+  if (activeBpRow) {
+    const { rows: bpDayRows } = await db.query(
+      `SELECT id, blueprint_id, day_number, log_date::TEXT AS log_date, title, mission, rationale,
+              status, completed_at, original_log_date::TEXT AS original_log_date, rescheduled_at
+       FROM blueprint_days
+       WHERE blueprint_id = $1
+       ORDER BY day_number ASC`,
+      [activeBpRow.id]
+    );
+
+    const days = bpDayRows.map((d) => ({
+      id: Number(d.id),
+      dayNumber: Number(d.day_number),
+      date: d.log_date,
+      title: d.title,
+      mission: d.mission,
+      rationale: d.rationale,
+      status: d.status,
+      originalDate: d.original_log_date || null,
+      rescheduledAt: d.rescheduled_at || null,
+    }));
+
+    const todayMission = days.find((d) => d.date === currentDate) || null;
+    const pendingDays = days.filter((d) => d.status === 'pending');
+    const completedDays = days.filter((d) => d.status === 'completed');
+    const skippedDays = days.filter((d) => d.status === 'skipped');
+    const rescheduledDays = days.filter((d) => d.originalDate && d.originalDate !== d.date);
+
+    context.roadmap = {
+      id: Number(activeBpRow.id),
+      title: activeBpRow.title,
+      outcome: activeBpRow.outcome,
+      durationDays: Number(activeBpRow.duration_days),
+      startDate: activeBpRow.start_date,
+      endDate: activeBpRow.end_date,
+      currentDate: currentDate || null,
+      todayMission: todayMission
+        ? {
+            id: todayMission.id,
+            dayNumber: todayMission.dayNumber,
+            title: todayMission.title,
+            mission: todayMission.mission,
+            status: todayMission.status,
+            date: todayMission.date,
+          }
+        : null,
+      totalMissions: days.length,
+      pendingCount: pendingDays.length,
+      completedCount: completedDays.length,
+      skippedCount: skippedDays.length,
+      rescheduledCount: rescheduledDays.length,
+      days,
+    };
+  }
+
+  // 4. Wellness
   const wellnessRow = todayWellnessResult.rows[0];
   const wellness7dRow = wellness7dResult.rows[0];
   const wellnessObj = {};

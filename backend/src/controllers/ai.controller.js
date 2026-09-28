@@ -111,14 +111,54 @@ const aiChat = async (req, res, next) => {
     const selectedContext = selectRelevantContext(fullContext, trimmed);
 
     // ── Gemini call ─────────────────────────────────────────────────────────
-    const reply = await geminiService.sendMessage(trimmed, selectedContext);
+    const geminiResult = await geminiService.sendMessage(trimmed, selectedContext);
+    const reply = typeof geminiResult === 'object' && geminiResult !== null
+      ? geminiResult.reply
+      : (typeof geminiResult === 'string' ? geminiResult : '');
+    const rawAction = typeof geminiResult === 'object' && geminiResult !== null
+      ? geminiResult.action
+      : null;
+
+    // ── Validate action if proposed ──────────────────────────────────────────
+    let validatedAction = null;
+    if (
+      rawAction &&
+      rawAction.type === 'RESCHEDULE_ROADMAP_DAY' &&
+      typeof rawAction.dayId === 'number' &&
+      typeof rawAction.targetDate === 'string'
+    ) {
+      const activeRoadmap = dbContext.roadmap;
+      if (activeRoadmap && Array.isArray(activeRoadmap.days)) {
+        const targetDay = activeRoadmap.days.find((d) => d.id === rawAction.dayId);
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (targetDay && targetDay.status === 'pending' && dateRegex.test(rawAction.targetDate)) {
+          // Ensure targetDate is not already occupied by another day in the same roadmap
+          const isOccupied = activeRoadmap.days.some(
+            (d) => d.id !== rawAction.dayId && d.date === rawAction.targetDate
+          );
+          if (!isOccupied) {
+            validatedAction = {
+              type: 'RESCHEDULE_ROADMAP_DAY',
+              dayId: Number(targetDay.id),
+              dayNumber: Number(targetDay.dayNumber),
+              missionTitle: targetDay.title,
+              currentDate: targetDay.date,
+              targetDate: rawAction.targetDate,
+            };
+          }
+        }
+      }
+    }
 
     // ── Success response ────────────────────────────────────────────────────
-    console.log('[AI] AI chat request handled, userId=%d, status=200', userId);
+    console.log('[AI] AI chat request handled, userId=%d, status=200, action=%s', userId, validatedAction ? validatedAction.type : 'none');
     return res.status(200).json({
       success: true,
-      data:    { reply },
-      error:   null,
+      data: {
+        reply,
+        action: validatedAction,
+      },
+      error: null,
     });
 
   } catch (err) {
