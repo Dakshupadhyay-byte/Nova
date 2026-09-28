@@ -158,4 +158,38 @@ const createBlueprint = async (req, res, next) => {
   }
 };
 
-module.exports = { createBlueprint };
+/**
+ * GET /api/blueprints
+ *
+ * Authenticated endpoint to retrieve all blueprints and nested days for the current user.
+ * Identity is derived strictly from req.user.id — query params (e.g. ?user_id=X) are ignored.
+ */
+const getBlueprints = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authentication token required.',
+        },
+      });
+    }
+
+    const blueprints = await blueprintService.getUserBlueprints(userId);
+
+    return res.status(200).json({
+      success: true,
+      data: { blueprints },
+      error: null,
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { createBlueprint, getBlueprints };
+

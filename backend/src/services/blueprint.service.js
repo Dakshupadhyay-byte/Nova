@@ -201,4 +201,74 @@ const createBlueprint = async (userId, outcome, durationDays) => {
   }
 };
 
-module.exports = { createBlueprint };
+/**
+ * Retrieves all blueprints and nested days for an authenticated user, newest blueprints first.
+ *
+ * @param {number} userId - Authenticated PostgreSQL user ID (from req.user.id).
+ * @returns {Promise<Array<Object>>} Array of blueprint objects with nested days.
+ */
+const getUserBlueprints = async (userId) => {
+  // Query 1: Fetch blueprints for user (newest first)
+  const { rows: bpRows } = await db.query(
+    `SELECT id, title, outcome, duration_days, start_date, end_date, status, created_at, updated_at
+     FROM blueprints
+     WHERE user_id = $1
+     ORDER BY created_at DESC`,
+    [userId]
+  );
+
+  if (bpRows.length === 0) {
+    return [];
+  }
+
+  // Query 2: Fetch blueprint days for user's blueprints (ordered by day_number ASC)
+  const { rows: dayRows } = await db.query(
+    `SELECT d.id, d.blueprint_id, d.day_number, d.log_date, d.title, d.mission, d.rationale, d.status, d.completed_at, d.created_at, d.updated_at
+     FROM blueprint_days d
+     JOIN blueprints b ON d.blueprint_id = b.id
+     WHERE b.user_id = $1
+     ORDER BY d.blueprint_id, d.day_number ASC`,
+    [userId]
+  );
+
+  // Group days by blueprint_id
+  const daysByBlueprint = new Map();
+  for (const d of dayRows) {
+    const bpId = String(d.blueprint_id);
+    if (!daysByBlueprint.has(bpId)) {
+      daysByBlueprint.set(bpId, []);
+    }
+    daysByBlueprint.get(bpId).push({
+      id: Number(d.id),
+      dayNumber: Number(d.day_number),
+      logDate: d.log_date,
+      title: d.title,
+      mission: d.mission,
+      rationale: d.rationale,
+      status: d.status,
+      completedAt: d.completed_at,
+      createdAt: d.created_at,
+      updatedAt: d.updated_at,
+    });
+  }
+
+  // Format blueprint objects
+  return bpRows.map((bp) => {
+    const bpId = String(bp.id);
+    return {
+      id: Number(bp.id),
+      title: bp.title,
+      outcome: bp.outcome,
+      durationDays: Number(bp.duration_days),
+      startDate: bp.start_date,
+      endDate: bp.end_date,
+      status: bp.status,
+      createdAt: bp.created_at,
+      updatedAt: bp.updated_at,
+      days: daysByBlueprint.get(bpId) || [],
+    };
+  });
+};
+
+module.exports = { createBlueprint, getUserBlueprints };
+

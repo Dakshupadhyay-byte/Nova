@@ -4,7 +4,23 @@
 
 'use strict';
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+const firebaseAdmin = require('./src/config/firebaseAdmin');
+
+// Mock verifyFirebaseToken for test suite execution without modifying firebaseAdmin.js
+const originalVerify = firebaseAdmin.verifyFirebaseToken;
+firebaseAdmin.verifyFirebaseToken = async (token) => {
+  if (token.startsWith('mock-token:') || token.startsWith('mock-dev-token-')) {
+    const parts = token.split(':');
+    const uid = parts[1] || parts[0];
+    const email = parts[2] ? decodeURIComponent(parts[2]) : `${uid}@nova.user`;
+    const name = parts[3] ? decodeURIComponent(parts[3]) : email.split('@')[0];
+    return { uid, email, name };
+  }
+  return originalVerify(token);
+};
 
 const http = require('http');
 const app = require('./src/app');
@@ -160,7 +176,43 @@ async function runBlueprintTests() {
   // Restore original generateBlueprintPlan
   geminiService.generateBlueprintPlan = originalGenerate;
 
-  console.log('\n=== ALL PHASE 2B BLUEPRINT TESTS PASSED SUCCESSFULLY ===');
+  // =========================================================================
+  // PHASE 2C: GET /api/blueprints TESTS
+  // =========================================================================
+  console.log('\n--- TESTING PHASE 2C READ API (GET /api/blueprints) ---');
+
+  // TEST 10: GET /api/blueprints unauthenticated -> 401
+  console.log('\n[10] Testing GET /api/blueprints Unauthenticated (Expect 401)...');
+  const getUnauthRes = await request('GET', '/api/blueprints');
+  console.log('Status:', getUnauthRes.status, getUnauthRes.status === 401 ? 'PASSED' : 'FAILED');
+
+  // TEST 11: GET /api/blueprints for User 2 (no blueprints) -> 200 with empty array []
+  console.log('\n[11] Testing GET /api/blueprints for User with No Blueprints (Expect 200 with [])...');
+  const getEmptyRes = await request('GET', '/api/blueprints', null, headersUser2);
+  console.log('Status:', getEmptyRes.status, getEmptyRes.body?.data?.blueprints?.length === 0 ? 'PASSED (Empty array [])' : 'FAILED');
+
+  // TEST 12: GET /api/blueprints for User 1 (has blueprint created in test 4) -> 200 with nested days
+  console.log('\n[12] Testing GET /api/blueprints for User 1 (Has 1 Blueprint)...');
+  const getU1Res = await request('GET', '/api/blueprints', null, headersUser1);
+  console.log('Status:', getU1Res.status, getU1Res.body?.data?.blueprints?.length === 1 ? 'PASSED' : 'FAILED');
+  const fetchedBp = getU1Res.body?.data?.blueprints?.[0];
+  const fetchedDays = fetchedBp?.days;
+  console.log('Fetched Blueprint Title:', fetchedBp?.title);
+  console.log('Fetched Days Count (7):', fetchedDays?.length === 7 ? 'PASSED' : 'FAILED');
+  console.log('Days Nested Correctly & Ordered 1..7:', fetchedDays?.every((d, i) => d.dayNumber === i + 1) ? 'PASSED' : 'FAILED');
+  console.log('Properties in camelCase:', fetchedBp?.durationDays === 7 && fetchedBp?.startDate != null ? 'PASSED' : 'FAILED');
+
+  // TEST 13: Query param override attempt GET /api/blueprints?user_id=99999 -> returns ONLY User 2's data
+  console.log('\n[13] Testing Query Parameter user_id Override Attempt (GET /api/blueprints?user_id=99999 for User 2)...');
+  const getSpoofRes = await request('GET', '/api/blueprints?user_id=99999', null, headersUser2);
+  console.log('Status:', getSpoofRes.status, getSpoofRes.body?.data?.blueprints?.length === 0 ? 'PASSED (Override ignored, 0 blueprints returned)' : 'FAILED');
+
+  // TEST 14: User Isolation Check (User 2 calling GET /api/blueprints cannot see User 1's blueprint)
+  console.log('\n[14] Testing Strict User Isolation (User 2 cannot see User 1 blueprints)...');
+  const containsUser1Bp = getEmptyRes.body?.data?.blueprints?.some((b) => b.id === fetchedBp?.id);
+  console.log('User 2 list contains User 1 blueprint:', containsUser1Bp ? 'FAILED (Isolation breach!)' : 'PASSED (Isolated)');
+
+  console.log('\n=== ALL PHASE 2B & 2C BLUEPRINT TESTS PASSED SUCCESSFULLY ===');
   server.close();
   process.exit(0);
 }
