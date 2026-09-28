@@ -5,6 +5,7 @@ import {
   Activity, 
   BarChart3, 
   Clock, 
+  Compass,
   Settings, 
   Lock 
 } from 'lucide-react';
@@ -28,6 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'checkin', label: 'Check-in', icon: Activity },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'history', label: 'History', icon: Clock },
+    { id: 'blueprint', label: 'Blueprint', icon: Compass },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'login', label: 'Sign In / Lock', icon: Lock },
   ];

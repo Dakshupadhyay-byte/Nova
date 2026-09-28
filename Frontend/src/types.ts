@@ -1,4 +1,4 @@
-export type NavTab = 'overview' | 'focus' | 'checkin' | 'analytics' | 'history' | 'settings' | 'login' | 'nova-ai';
+export type NavTab = 'overview' | 'focus' | 'checkin' | 'analytics' | 'history' | 'blueprint' | 'settings' | 'login' | 'nova-ai';
 
 export interface DailyHealthMetric {
   date: string;
@@ -63,3 +63,30 @@ export interface CircadianEvent {
   detail: string;
   impactScore?: string;
 }
+
+export interface BlueprintDay {
+  id: number;
+  dayNumber: number;
+  logDate: string;
+  title: string;
+  mission: string;
+  rationale: string | null;
+  status: 'pending' | 'completed' | 'skipped' | string;
+  completedAt: string | null;
+  createdAt?: string;
+  updatedAt?: string | null;
+}
+
+export interface Blueprint {
+  id: number;
+  title: string;
+  outcome: string;
+  durationDays: number;
+  startDate: string;
+  endDate: string;
+  status: 'active' | 'completed' | 'cancelled' | 'paused' | string;
+  createdAt: string;
+  updatedAt?: string | null;
+  days: BlueprintDay[];
+}
+

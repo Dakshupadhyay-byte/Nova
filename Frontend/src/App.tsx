@@ -16,6 +16,7 @@ import { AnalyticsScreen } from './screens/AnalyticsScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { NovaAIScreen } from './screens/NovaAIScreen';
+import { BlueprintScreen } from './screens/BlueprintScreen';
 import { LoginScreen, AuthenticatedUser } from './screens/LoginScreen';
 import { LandingPage } from './screens/landing/LandingPage';
 import {
@@ -123,6 +124,7 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
           {currentTab === 'checkin' && <CheckInScreen metrics={metrics} onUpdateMetrics={handleUpdateMetrics} onGoToOverview={() => setCurrentTab('overview')} />}
           {currentTab === 'analytics' && <AnalyticsScreen metrics={metrics} />}
           {currentTab === 'history' && <HistoryScreen focusBlocks={focusBlocks} />}
+          {currentTab === 'blueprint' && <BlueprintScreen />}
           {currentTab === 'settings' && <SettingsScreen user={currentUser} />}
           {currentTab === 'nova-ai' && <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden"><NovaAIScreen /></div>}
         </main>
@@ -212,6 +214,9 @@ export default function App() {
           <AppShell authState={authState} onLogout={handleLogout} />
         } />
         <Route path="/history" element={
+          <AppShell authState={authState} onLogout={handleLogout} />
+        } />
+        <Route path="/blueprint" element={
           <AppShell authState={authState} onLogout={handleLogout} />
         } />
         <Route path="/settings" element={

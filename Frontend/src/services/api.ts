@@ -1,6 +1,4 @@
-// =============================================================================
-// src/services/api.ts — Frontend HTTP API Service Client
-// =============================================================================
+import { Blueprint, BlueprintDay } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -163,4 +161,35 @@ export async function getDailyHealth(
 
   return result.success && Array.isArray(result.data) ? result.data : null;
 }
+
+/**
+ * Fetch all blueprints and nested days for the authenticated user.
+ * GET /api/blueprints
+ */
+export async function getBlueprints(
+  token: string
+): Promise<{ success: boolean; data: { blueprints: Blueprint[] } | null; error: any }> {
+  return fetchWithAuth<{ blueprints: Blueprint[] }>('/blueprints', token, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Create a new personalized blueprint for the authenticated user.
+ * POST /api/blueprints
+ */
+export async function createBlueprint(
+  token: string,
+  outcome: string,
+  durationDays: number
+): Promise<{ success: boolean; data: { blueprint: Blueprint } | null; error: any }> {
+  return fetchWithAuth<{ blueprint: Blueprint }>('/blueprints', token, {
+    method: 'POST',
+    body: JSON.stringify({
+      outcome,
+      durationDays,
+    }),
+  });
+}
+
 
