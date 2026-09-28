@@ -6,7 +6,9 @@ import {
   BarChart3, 
   Clock, 
   Compass,
-  Settings 
+  Settings,
+  Lock,
+  FlaskConical
 } from 'lucide-react';
 import { NavTab } from '../types';
 import { NovaLogo } from './NovaLogo';
@@ -36,6 +38,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'history', label: 'History', icon: Clock },
     { id: 'blueprint', label: 'Roadmap', icon: Compass },
+    { id: 'simulator', label: 'What-If Simulator', icon: FlaskConical },
+    { id: 'login', label: 'Sign In / Lock', icon: Lock },
   ];
 
   const secondaryNavItems: NavItemConfig[] = [

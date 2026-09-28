@@ -18,6 +18,7 @@ import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { NovaAIScreen } from './screens/NovaAIScreen';
 import { BlueprintScreen } from './screens/BlueprintScreen';
+import { SimulatorScreen } from './screens/SimulatorScreen';
 import { LoginScreen, AuthenticatedUser } from './screens/LoginScreen';
 import { LandingPage } from './screens/landing/LandingPage';
 import {
@@ -51,6 +52,7 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
     if (path.includes('analytics')) return 'analytics';
     if (path.includes('history')) return 'history';
     if (path.includes('blueprint')) return 'blueprint';
+    if (path.includes('simulator')) return 'simulator';
     if (path.includes('settings')) return 'settings';
     return 'overview';
   };
@@ -90,7 +92,7 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
         const token = await getIdToken();
         if (!token) return;
         const dashboard = await getDashboard(token);
-        const sleepHours = dashboard?.today?.sleepHours;
+        const sleepHours = dashboard?.today?.sleepHours ?? dashboard?.recentWellness?.[0]?.sleepHours;
         if (isMounted && sleepHours != null) {
           setMetrics((prev) => ({
             ...prev,
@@ -147,7 +149,17 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header user={currentUser} onSearch={q => setSearchQuery(q)} onOpenSettings={() => handleSelectTab('settings')} onLockTerminal={handleLockTerminal} />
         <main className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-16">
-          {currentTab === 'overview' && <OverviewScreen metrics={metrics} focusBlocks={focusBlocks} onStartFocus={() => handleSelectTab('focus')} onViewFullLogbook={() => handleSelectTab('history')} onOpenNovaAI={() => handleSelectTab('nova-ai')} searchQuery={searchQuery} />}
+          {currentTab === 'overview' && (
+            <OverviewScreen
+              metrics={metrics}
+              focusBlocks={focusBlocks}
+              onStartFocus={() => handleSelectTab('focus')}
+              onViewFullLogbook={() => handleSelectTab('history')}
+              onOpenNovaAI={() => handleSelectTab('nova-ai')}
+              onOpenSimulator={() => handleSelectTab('simulator')}
+              searchQuery={searchQuery}
+            />
+          )}
           {currentTab === 'focus' && <FocusScreen onBackToOverview={() => handleSelectTab('overview')} onSessionComplete={handleSessionComplete} />}
           {currentTab === 'checkin' && <CheckInScreen metrics={metrics} onUpdateMetrics={handleUpdateMetrics} onGoToOverview={() => handleSelectTab('overview')} />}
           {currentTab === 'analytics' && <AnalyticsScreen metrics={metrics} />}
@@ -155,6 +167,7 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
           {currentTab === 'blueprint' && <BlueprintScreen />}
           {currentTab === 'settings' && <SettingsScreen user={currentUser} />}
           {currentTab === 'nova-ai' && <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden"><NovaAIScreen /></div>}
+          {currentTab === 'simulator' && <SimulatorScreen onBack={() => handleSelectTab('overview')} />}
         </main>
         {currentTab !== 'nova-ai' && (
           <FloatingNovaAIButton onOpenNovaAI={() => handleSelectTab('nova-ai')} />
@@ -254,6 +267,9 @@ export default function App() {
           <AppShell authState={authState} onLogout={handleLogout} />
         } />
         <Route path="/blueprint" element={
+          <AppShell authState={authState} onLogout={handleLogout} />
+        } />
+        <Route path="/simulator" element={
           <AppShell authState={authState} onLogout={handleLogout} />
         } />
         <Route path="/settings" element={

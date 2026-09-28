@@ -1,4 +1,4 @@
-export type NavTab = 'overview' | 'focus' | 'checkin' | 'analytics' | 'history' | 'blueprint' | 'settings' | 'login' | 'nova-ai';
+export type NavTab = 'overview' | 'focus' | 'checkin' | 'analytics' | 'history' | 'blueprint' | 'simulator' | 'settings' | 'login' | 'nova-ai';
 
 export interface DailyHealthMetric {
   date: string;
@@ -90,5 +90,30 @@ export interface Blueprint {
   createdAt: string;
   updatedAt?: string | null;
   days: BlueprintDay[];
+}
+
+// ─── What-If Simulator Types ───────────────────────────────────────────────────
+
+export interface SimulationDataPoint {
+  sleepHours: number;
+  energyLevel: number;
+  logDate: string;
+}
+
+export interface SimulationResult {
+  available: boolean;
+  variable: string;
+  value: number;
+  baselineAvgSleep: number | null;
+  baselineAvgEnergy: number | null;
+  simulatedAvgEnergy: number | null;
+  energyDelta: number | null;
+  sampleSize: number;
+  totalRecords: number;
+  sleepRangeLow: number;
+  sleepRangeHigh: number;
+  confidence: 'low' | 'moderate' | 'high';
+  distribution: SimulationDataPoint[];
+  insight: string;
 }
 

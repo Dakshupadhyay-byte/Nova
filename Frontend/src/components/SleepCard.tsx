@@ -8,8 +8,9 @@ interface SleepCardProps {
 }
 
 export const SleepCard: React.FC<SleepCardProps> = ({ metrics, onOpenDetails }) => {
-  const hasSleepData = metrics?.sleepHours != null && !isNaN(Number(metrics.sleepHours));
-  const formattedSleepHours = hasSleepData ? Number(metrics.sleepHours).toFixed(1) : '--';
+  const sleepHours = metrics?.sleepHours;
+  const hasSleepData = sleepHours !== null && sleepHours !== undefined && !isNaN(Number(sleepHours)) && Number(sleepHours) > 0;
+  const formattedHours = hasSleepData ? Number(sleepHours).toFixed(1) : '--';
 
   return (
     <div 
@@ -24,19 +25,15 @@ export const SleepCard: React.FC<SleepCardProps> = ({ metrics, onOpenDetails }) 
 
         {/* Big number & Status pill */}
         <div className="flex items-baseline gap-2.5">
-          <span className={`text-3xl font-extrabold tracking-tight tabular-nums ${
-            hasSleepData ? 'text-[#131b2e]' : 'text-[#94a3b8]'
-          }`}>
-            {formattedSleepHours}
+          <span className={`text-3xl font-extrabold tracking-tight tabular-nums ${hasSleepData ? 'text-[#131b2e]' : 'text-[#94a3b8]'}`}>
+            {formattedHours}
           </span>
-          <span className={`text-[14px] font-semibold ${
-            hasSleepData ? 'text-[#6d7a77]' : 'text-[#94a3b8]'
-          }`}>
-            hrs
-          </span>
+          <span className={`text-[14px] font-semibold ${hasSleepData ? 'text-[#6d7a77]' : 'text-[#94a3b8]'}`}>hrs</span>
           <div className="ml-auto flex flex-col items-end">
             <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${
-              hasSleepData ? 'bg-[#e6f7f4] text-[#00685f]' : 'bg-[#f1f5f9] text-[#64748b]'
+              hasSleepData 
+                ? 'bg-[#f4effe] text-[#712ae2]' 
+                : 'bg-[#f1f5f9] text-[#64748b]'
             }`}>
               {hasSleepData ? 'Logged' : 'Not Available'}
             </span>
@@ -45,19 +42,25 @@ export const SleepCard: React.FC<SleepCardProps> = ({ metrics, onOpenDetails }) 
 
         {/* Status explanation */}
         <div className="text-[12px] text-[#64748b] mt-2">
-          Sleep stage telemetry is not currently synced from Health Connect.
+          {hasSleepData
+            ? 'Sleep duration available from wellness history.'
+            : 'Sleep stage telemetry is not currently synced from Health Connect.'}
         </div>
       </div>
 
-      {/* Segmented Stages Track - Neutral Track */}
+      {/* Segmented Stages Track */}
       <div className="mt-4">
         <div className="w-full h-2 rounded-full bg-[#f1f5f9] overflow-hidden flex">
-          <div style={{ width: '100%' }} className="h-full bg-slate-200" title="Stage breakdown unavailable" />
+          <div 
+            style={{ width: `${hasSleepData ? Math.min(100, Math.round((Number(sleepHours) / 8) * 100)) : 100}%` }} 
+            className={`h-full ${hasSleepData ? 'bg-gradient-to-r from-[#712ae2] to-[#a855f7]' : 'bg-slate-200'}`} 
+            title={hasSleepData ? `Sleep duration: ${formattedHours} hrs` : 'Stage breakdown unavailable'} 
+          />
         </div>
 
         <div className="flex items-center justify-between text-[11px] text-[#94a3b8] mt-2">
           <span>Sleep Stages: <strong className="text-[#64748b]">N/A</strong></span>
-          <span>Sync Status: <strong className="text-[#64748b]">Pending</strong></span>
+          <span>Sync Status: <strong className={hasSleepData ? 'text-[#712ae2]' : 'text-[#64748b]'}>{hasSleepData ? 'Synced' : 'Pending'}</strong></span>
         </div>
       </div>
     </div>

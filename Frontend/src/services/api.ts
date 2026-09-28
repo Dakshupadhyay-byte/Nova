@@ -209,5 +209,33 @@ export async function rescheduleBlueprintDay(
   });
 }
 
+// ─── What-If Simulator ────────────────────────────────────────────────────────
 
+export interface WhatIfRequest {
+  variable: 'sleep';
+  value: number;
+}
+
+export interface WhatIfSimulationResponse {
+  simulation: import('../types').SimulationResult;
+}
+
+/**
+ * POST /api/simulation/what-if
+ *
+ * Runs a What-If simulation against the authenticated user's real historical data.
+ * The backend derives the user ID from the Firebase auth token — never from this payload.
+ */
+export async function runWhatIfSimulation(
+  token: string,
+  variable: 'sleep',
+  value: number
+): Promise<WhatIfSimulationResponse | null> {
+  const result = await fetchWithAuth<WhatIfSimulationResponse>('/simulation/what-if', token, {
+    method: 'POST',
+    body: JSON.stringify({ variable, value }),
+  });
+
+  return result.success && result.data ? result.data : null;
+}
 
