@@ -125,24 +125,74 @@ const sendMessage = async (userMessage, selectedContext) => {
   // The preamble is human-readable so it is easy to inspect during debugging.
   const contextLines = [];
 
-  if (selectedContext.userName) {
-    contextLines.push(`User name: ${selectedContext.userName}`);
+  const name = selectedContext.user?.name || selectedContext.userName;
+  if (name) {
+    contextLines.push(`User name: ${name}`);
   }
-  if (selectedContext.todaySleepHours != null) {
-    contextLines.push(`Today's sleep: ${selectedContext.todaySleepHours} hours`);
-  }
-  if (selectedContext.todayEnergyLevel != null) {
-    contextLines.push(`Today's energy level: ${selectedContext.todayEnergyLevel}/10`);
-  }
-  if (selectedContext.recentFocus) {
-    const f = selectedContext.recentFocus;
-    contextLines.push(
 
-      `Recent focus (last 7 days): ` +
-      `${f.totalSessionsLast7Days} sessions, ` +
-      `${f.completedLast7Days} completed, ` +
-      `${f.totalMinutesLast7Days} total minutes`
+  const currentDate = selectedContext.currentDate || selectedContext.temporalContext?.currentDate;
+  if (currentDate) {
+    contextLines.push(`Current date: ${currentDate}`);
+  }
+
+  // Wellness
+  if (selectedContext.wellness) {
+    const w = selectedContext.wellness;
+    const parts = [];
+    if (w.todaySleepHours != null) parts.push(`Today's sleep: ${w.todaySleepHours} hours`);
+    if (w.todayEnergyLevel != null) parts.push(`Today's energy level: ${w.todayEnergyLevel}/10`);
+    if (w.avgSleepHours7d != null) parts.push(`7-day avg sleep: ${w.avgSleepHours7d} hours`);
+    if (w.avgEnergyLevel7d != null) parts.push(`7-day avg energy level: ${w.avgEnergyLevel7d}/10`);
+    if (parts.length > 0) contextLines.push(`Wellness: ${parts.join(' | ')}`);
+  } else {
+    if (selectedContext.todaySleepHours != null) {
+      contextLines.push(`Today's sleep: ${selectedContext.todaySleepHours} hours`);
+    }
+    if (selectedContext.todayEnergyLevel != null) {
+      contextLines.push(`Today's energy level: ${selectedContext.todayEnergyLevel}/10`);
+    }
+  }
+
+  // Focus
+  if (selectedContext.focus) {
+    const f = selectedContext.focus;
+    const parts = [];
+    if (f.todayMinutes != null || f.todaySessions != null) {
+      parts.push(`Today: ${f.todayMinutes || 0} total mins across ${f.todaySessions || 0} sessions (${f.todayCompleted || 0} completed)`);
+    }
+    if (f.totalSessionsLast7Days > 0) {
+      let f7 = `Last 7 days: ${f.totalSessionsLast7Days} sessions (${f.completedLast7Days} completed`;
+      if (f.completionRatePercent != null) f7 += `, ${f.completionRatePercent}% completion rate`;
+      f7 += `), ${f.totalMinutesLast7Days} total mins`;
+      if (f.avgInterruptionsLast7Days != null) f7 += `, avg ${f.avgInterruptionsLast7Days} interruptions/session`;
+      parts.push(f7);
+    }
+    if (f.mostRecentSession) {
+      const m = f.mostRecentSession;
+      parts.push(`Most recent session: ${m.durationMinutes} mins (${m.completed ? 'completed' : 'incomplete'}), started at ${m.startedAt}, ${m.interruptions} interruptions`);
+    }
+    if (parts.length > 0) contextLines.push(`Focus: ${parts.join(' | ')}`);
+  } else if (selectedContext.recentFocus) {
+    const rf = selectedContext.recentFocus;
+    contextLines.push(
+      `Recent focus (last 7 days): ${rf.totalSessionsLast7Days} sessions, ${rf.completedLast7Days} completed, ${rf.totalMinutesLast7Days} total minutes`
     );
+  }
+
+  // Health
+  if (selectedContext.health) {
+    const h = selectedContext.health;
+    const parts = [];
+    if (h.todaySteps != null) parts.push(`Today's steps: ${h.todaySteps}`);
+    if (h.todayActiveExerciseMinutes != null) parts.push(`Today's exercise: ${h.todayActiveExerciseMinutes} mins`);
+    if (h.todayExerciseDistanceMeters != null) parts.push(`Today's distance: ${h.todayExerciseDistanceMeters} meters`);
+    if (h.totalSteps7d != null && Number(h.totalSteps7d) > 0) {
+      parts.push(`7-day steps total: ${h.totalSteps7d} (avg ${h.avgSteps7d}/day)`);
+    }
+    if (h.totalExerciseMinutes7d != null && Number(h.totalExerciseMinutes7d) > 0) {
+      parts.push(`7-day exercise total: ${h.totalExerciseMinutes7d} mins`);
+    }
+    if (parts.length > 0) contextLines.push(`Health: ${parts.join(' | ')}`);
   }
 
   const contextPreamble = contextLines.length > 0

@@ -3,87 +3,53 @@
 // =============================================================================
 //
 // This module is the single source of truth for what user data is sent to Gemini.
-// It implements three functions that form a pipeline:
+// Phase 1 implementation aggregates holistic personal context from PostgreSQL:
+//   • User profile (name)
+//   • Focus session statistics (today & 7-day summaries, completion rate, interruptions, most recent session)
+//   • Wellness check-ins (today & 7-day averages for sleep and energy)
+//   • Health daily aggregates (today & 7-day step, exercise, and distance totals)
+//   • Temporal context (current database date)
 //
-//   buildDbContext(userId)
-//       ↓ (real PostgreSQL data only)
-//   mergeHealthContext(dbContext, healthJson)
-//       ↓ (future: adds relevant canonical NOVA Health JSON fields)
-//   selectRelevantContext(fullContext, userMessage)
-//       ↓ (allowlisted fields only, selected by message relevance)
-//   Gemini service
-//
-// DESIGN PRINCIPLES
-// ──────────────────
-// 1. DATA MINIMIZATION — Only the minimum data needed for the current request
-//    is sent to Gemini. The full context object is never sent wholesale.
-//
-// 2. NO FABRICATION — If a value does not exist in the database (NULL, no rows),
-//    it is omitted from the context object. It is never replaced with a default,
-//    zero, or placeholder value.
-//
-// 3. GEMINI AGNOSTICISM — The Gemini service never knows whether context came
-//    from PostgreSQL or a future canonical Health JSON. That distinction lives
-//    only in this file.
-//
-// 4. HEALTH JSON READINESS — mergeHealthContext() is a deliberate integration
-//    point for a future canonical NOVA Health JSON (from Samsung Health /
-//    Google Health Connect). In Phase 1 it is a structural placeholder only —
-//    it returns dbContext unchanged when healthJson is null. When the canonical
-//    Health JSON schema is defined, only this function needs to be updated.
-//    The Gemini service, controller, and routes remain unchanged.
-//
-// 5. RELEVANCE ISOLATION — selectRelevantContext() is isolated so that its
-//    logic can be extended or replaced independently when the Health JSON
-//    schema adds new context dimensions (e.g., activity, HRV, VO2max).
-//
-// PHASE 1 DATA SOURCES (PostgreSQL only)
-// ────────────────────────────────────────
-// • users.name                            → userName
-// • wellness_logs (today)                 → today.sleepHours, today.energyLevel
-// • focus_sessions (last 7 days)          → recentFocus.*
-//
-// NOTE: No demo, mock, fake, seed, or sample data is created or inserted
-// anywhere in this file or by any function in this file.
+// All queries remain strictly scoped to the authenticated user ID (`userId`).
+// No credential fields, raw telemetry JSON payloads, or fake data are used.
 // =============================================================================
 
 'use strict';
 
 const db = require('../config/db');
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-// The lookback window for recent focus sessions.
-// "Last 7 days" = the 7 calendar days preceding and including today.
+// The lookback window for recent metrics (7 days preceding and including today).
 const RECENT_DAYS = 7;
-
-// ─── buildDbContext ───────────────────────────────────────────────────────────
 
 /**
  * Queries PostgreSQL for the user's current data and returns a structured
- * context object containing only fields that actually exist in the database.
+ * personal context object containing only fields that actually exist in the DB.
  *
- * Missing values (NULL, no rows) are represented as absent keys in the returned
- * object — never as zeros, nulls, or invented defaults.
+ * Scoped strictly to `userId`. Missing values (NULL, no rows) are omitted or
+ * represented as absent/null rather than fabricated.
  *
  * @param {number} userId - The authenticated PostgreSQL user ID (from req.user.id).
- * @returns {Promise<Object>} The raw full context from PostgreSQL.
+ * @returns {Promise<Object>} Personal context object.
  */
 const buildDbContext = async (userId) => {
-  // Run all queries in parallel — they are independent of each other.
-  const [userResult, todayWellnessResult, recentFocusResult] = await Promise.all([
-
-    // Q1: User name — used to personalize NOVA's responses.
-    // We select only name. We do NOT select email, google_id, or created_at.
+  const [
+    userResult,
+    todayWellnessResult,
+    wellness7dResult,
+    todayFocusResult,
+    focus7dResult,
+    recentFocusSessionResult,
+    todayHealthResult,
+    health7dResult,
+    currentDateResult,
+  ] = await Promise.all([
+    // Q1: User name (select only name, omit email/google_id/timestamps)
     db.query(
       'SELECT name FROM users WHERE id = $1 LIMIT 1',
       [userId]
     ),
 
-    // Q2: Today's wellness check-in.
-    // log_date = CURRENT_DATE uses the database server's date, which is consistent
-    // with how Feature 2 (POST /api/checkin) stores check-ins. We compare against
-    // the same anchor point to avoid any timezone mismatch.
+    // Q2: Today's wellness check-in
     db.query(
       `SELECT sleep_hours, energy_level
        FROM   wellness_logs
@@ -93,198 +59,232 @@ const buildDbContext = async (userId) => {
       [userId]
     ),
 
-    // Q3: Focus session summary for the last RECENT_DAYS calendar days.
-    // We count total sessions, completed sessions, and total minutes.
-    // Using started_at >= CURRENT_DATE - INTERVAL places the window on the DB
-    // server's calendar, consistent with Q2.
-    // COALESCE(SUM(...), 0) is intentional: if there are rows but all have zero
-    // minutes (which the schema CHECK prevents), we still get 0 not NULL.
-    // However, if COUNT(*) is 0 (no rows), SUM returns NULL — COALESCE handles that.
+    // Q3: 7-day average wellness
     db.query(
-      `SELECT COUNT(*)                                          AS total_sessions,
-              COUNT(*) FILTER (WHERE completed = TRUE)          AS completed_sessions,
-              COALESCE(SUM(duration_minutes), 0)                AS total_minutes
+      `SELECT AVG(sleep_hours)::NUMERIC(4,1)  AS avg_sleep,
+              AVG(energy_level)::NUMERIC(4,1) AS avg_energy
+       FROM   wellness_logs
+       WHERE  user_id  = $1
+         AND  log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
+      [userId, RECENT_DAYS]
+    ),
+
+    // Q4: Today's focus sessions
+    db.query(
+      `SELECT COUNT(*)::INTEGER                                  AS today_sessions,
+              COUNT(*) FILTER (WHERE completed = TRUE)::INTEGER  AS today_completed,
+              COALESCE(SUM(duration_minutes), 0)::INTEGER        AS today_minutes
+       FROM   focus_sessions
+       WHERE  user_id    = $1
+         AND  started_at >= CURRENT_DATE`,
+      [userId]
+    ),
+
+    // Q5: Last 7 days focus sessions summary
+    db.query(
+      `SELECT COUNT(*)::INTEGER                                  AS total_sessions,
+              COUNT(*) FILTER (WHERE completed = TRUE)::INTEGER  AS completed_sessions,
+              COALESCE(SUM(duration_minutes), 0)::INTEGER        AS total_minutes,
+              COALESCE(AVG(interruptions), 0)::NUMERIC(4,1)     AS avg_interruptions
        FROM   focus_sessions
        WHERE  user_id    = $1
          AND  started_at >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
       [userId, RECENT_DAYS]
     ),
-  ]);
 
-  // ── Assemble the context object ─────────────────────────────────────────────
-  // Only include keys whose underlying data actually exists.
-  // Absent keys signal "data not available" more accurately than null values
-  // and make the downstream omission logic in selectRelevantContext simpler.
+    // Q6: Most recent focus session
+    db.query(
+      `SELECT duration_minutes, interruptions, started_at, completed
+       FROM   focus_sessions
+       WHERE  user_id = $1
+       ORDER  BY started_at DESC
+       LIMIT  1`,
+      [userId]
+    ),
+
+    // Q7: Today's health daily aggregate
+    db.query(
+      `SELECT total_steps, active_exercise_minutes, exercise_distance_meters
+       FROM   health_daily_aggregates
+       WHERE  user_id  = $1
+         AND  log_date = CURRENT_DATE
+       LIMIT  1`,
+      [userId]
+    ),
+
+    // Q8: Last 7 days health summary from health_daily_aggregates
+    db.query(
+      `SELECT COALESCE(SUM(total_steps), 0)::BIGINT                      AS total_steps_7d,
+              COALESCE(AVG(total_steps), 0)::NUMERIC(10,0)               AS avg_steps_7d,
+              COALESCE(SUM(active_exercise_minutes), 0)::NUMERIC(10,1)  AS total_exercise_minutes_7d,
+              COALESCE(SUM(exercise_distance_meters), 0)::NUMERIC(12,1) AS total_exercise_distance_7d
+       FROM   health_daily_aggregates
+       WHERE  user_id  = $1
+         AND  log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
+      [userId, RECENT_DAYS]
+    ),
+
+    // Q9: Current database date
+    db.query(`SELECT CURRENT_DATE::TEXT AS current_date`),
+  ]);
 
   const context = {};
 
-  // User name — should always exist for an authenticated user, but we guard anyway.
+  // 1. User
   const userRow = userResult.rows[0];
   if (userRow && userRow.name) {
     context.userName = userRow.name;
+    context.user = { name: userRow.name };
   }
 
-  // Today's wellness — only set if a check-in exists for today.
+  // 2. Temporal context
+  const currentDate = currentDateResult.rows[0]?.current_date;
+  if (currentDate) {
+    context.currentDate = currentDate;
+    context.temporalContext = { currentDate };
+  }
+
+  // 3. Wellness
   const wellnessRow = todayWellnessResult.rows[0];
+  const wellness7dRow = wellness7dResult.rows[0];
+  const wellnessObj = {};
+
   if (wellnessRow) {
-    context.today = {};
-    // sleep_hours: NUMERIC(4,1) comes back as a string from pg — coerce to number.
     if (wellnessRow.sleep_hours != null) {
-      context.today.sleepHours = Number(wellnessRow.sleep_hours);
+      wellnessObj.todaySleepHours = Number(wellnessRow.sleep_hours);
+      context.todaySleepHours = Number(wellnessRow.sleep_hours);
     }
     if (wellnessRow.energy_level != null) {
-      context.today.energyLevel = Number(wellnessRow.energy_level);
-    }
-    // If the row exists but both fields are NULL (schema allows it), omit the key.
-    if (Object.keys(context.today).length === 0) {
-      delete context.today;
+      wellnessObj.todayEnergyLevel = Number(wellnessRow.energy_level);
+      context.todayEnergyLevel = Number(wellnessRow.energy_level);
     }
   }
 
-  // Recent focus summary — include only if at least one session exists.
-  const focusRow = recentFocusResult.rows[0];
-  const totalSessions = Number(focusRow.total_sessions) || 0;
-  if (totalSessions > 0) {
+  if (wellness7dRow) {
+    if (wellness7dRow.avg_sleep != null) {
+      wellnessObj.avgSleepHours7d = Number(wellness7dRow.avg_sleep);
+    }
+    if (wellness7dRow.avg_energy != null) {
+      wellnessObj.avgEnergyLevel7d = Number(wellness7dRow.avg_energy);
+    }
+  }
+
+  if (Object.keys(wellnessObj).length > 0) {
+    context.wellness = wellnessObj;
+  }
+
+  // 4. Focus
+  const todayFocusRow = todayFocusResult.rows[0];
+  const focus7dRow = focus7dResult.rows[0];
+  const mostRecentSessionRow = recentFocusSessionResult.rows[0];
+  const focusObj = {};
+
+  if (todayFocusRow) {
+    focusObj.todayMinutes = Number(todayFocusRow.today_minutes) || 0;
+    focusObj.todaySessions = Number(todayFocusRow.today_sessions) || 0;
+    focusObj.todayCompleted = Number(todayFocusRow.today_completed) || 0;
+  }
+
+  const totalSessions7d = Number(focus7dRow?.total_sessions) || 0;
+  if (totalSessions7d > 0) {
+    const completed7d = Number(focus7dRow.completed_sessions) || 0;
+    focusObj.totalSessionsLast7Days = totalSessions7d;
+    focusObj.completedLast7Days = completed7d;
+    focusObj.totalMinutesLast7Days = Number(focus7dRow.total_minutes) || 0;
+    focusObj.completionRatePercent = Number(((completed7d / totalSessions7d) * 100).toFixed(1));
+    focusObj.avgInterruptionsLast7Days = Number(focus7dRow.avg_interruptions) || 0;
+
+    // Backward-compatibility key
     context.recentFocus = {
-      totalSessionsLast7Days: totalSessions,
-      completedLast7Days:     Number(focusRow.completed_sessions) || 0,
-      totalMinutesLast7Days:  Number(focusRow.total_minutes)      || 0,
+      totalSessionsLast7Days: focusObj.totalSessionsLast7Days,
+      completedLast7Days: focusObj.completedLast7Days,
+      totalMinutesLast7Days: focusObj.totalMinutesLast7Days,
     };
+  }
+
+  if (mostRecentSessionRow) {
+    focusObj.mostRecentSession = {
+      durationMinutes: Number(mostRecentSessionRow.duration_minutes),
+      interruptions: Number(mostRecentSessionRow.interruptions),
+      startedAt: mostRecentSessionRow.started_at,
+      completed: Boolean(mostRecentSessionRow.completed),
+    };
+  }
+
+  if (Object.keys(focusObj).length > 0) {
+    context.focus = focusObj;
+  }
+
+  // 5. Health
+  const todayHealthRow = todayHealthResult.rows[0];
+  const health7dRow = health7dResult.rows[0];
+  const healthObj = {};
+
+  if (todayHealthRow) {
+    if (todayHealthRow.total_steps != null) {
+      healthObj.todaySteps = Number(todayHealthRow.total_steps);
+    }
+    if (todayHealthRow.active_exercise_minutes != null) {
+      healthObj.todayActiveExerciseMinutes = Number(todayHealthRow.active_exercise_minutes);
+    }
+    if (todayHealthRow.exercise_distance_meters != null) {
+      healthObj.todayExerciseDistanceMeters = Number(todayHealthRow.exercise_distance_meters);
+    }
+  }
+
+  if (health7dRow) {
+    const totalSteps7d = Number(health7dRow.total_steps_7d) || 0;
+    if (totalSteps7d > 0) {
+      healthObj.totalSteps7d = totalSteps7d;
+      healthObj.avgSteps7d = Number(health7dRow.avg_steps_7d) || 0;
+    }
+    const totalExerciseMin = Number(health7dRow.total_exercise_minutes_7d) || 0;
+    if (totalExerciseMin > 0) {
+      healthObj.totalExerciseMinutes7d = totalExerciseMin;
+    }
+    const totalDist = Number(health7dRow.total_exercise_distance_7d) || 0;
+    if (totalDist > 0) {
+      healthObj.totalExerciseDistanceMeters7d = totalDist;
+    }
+  }
+
+  if (Object.keys(healthObj).length > 0) {
+    context.health = healthObj;
   }
 
   return context;
 };
 
-// ─── mergeHealthContext ───────────────────────────────────────────────────────
-
 /**
- * Future integration point for the canonical NOVA Health JSON.
+ * Structural placeholder for future canonical Health JSON merging.
  *
- * In Phase 1 this function is a structural placeholder:
- *   • When healthJson is null (always in Phase 1), it returns dbContext unchanged.
- *   • No health data is fabricated, defaulted, or invented.
- *
- * Future behavior (Phase 2+ — once the canonical Health JSON schema is defined):
- *   • Extract only allowlisted fields from healthJson (e.g., sleep metrics,
- *     activity metrics, HRV) using an explicit allowlist.
- *   • Merge those fields into a copy of dbContext under a new `health` key.
- *   • Never send the complete Health JSON to Gemini — only selected fields pass
- *     through to selectRelevantContext().
- *
- * CONTRACT (invariants that must hold in all phases):
- *   • Gemini service must not know this function exists.
- *   • When healthJson is null, return value === dbContext (no mutation, no copy needed).
- *   • When healthJson is present, return a new object — do not mutate dbContext.
- *   • Never fabricate missing health values.
- *
- * @param {Object}      dbContext  - The context object from buildDbContext().
- * @param {Object|null} healthJson - The canonical NOVA Health JSON, or null.
- * @returns {Object} The merged context (or dbContext unchanged if healthJson is null).
+ * @param {Object} dbContext
+ * @param {Object|null} healthJson
+ * @returns {Object}
  */
 const mergeHealthContext = (dbContext, healthJson = null) => {
   if (!healthJson) {
-    // Phase 1: no health data available — return the DB context unchanged.
     return dbContext;
   }
-
-  // Phase 2+: This block will be implemented when the canonical Health JSON
-  // schema is defined. At that point:
-  //   1. Define an explicit allowlist of health fields relevant to NOVA.
-  //   2. Extract only those fields from healthJson.
-  //   3. Return { ...dbContext, health: { ...allowlistedFields } }.
-  //
-  // For now, treat a non-null healthJson as not-yet-supported and return dbContext.
-  console.warn('[AI Context] mergeHealthContext received a non-null healthJson, ' +
-    'but Health JSON integration is not yet implemented. Returning DB context only.');
   return dbContext;
 };
 
-// ─── selectRelevantContext ────────────────────────────────────────────────────
-
 /**
- * Selects only the context fields relevant to the user's current message.
- *
- * This is the enforcement point for the rule:
- *   "The complete context must NOT automatically be sent to Gemini."
- *
- * Relevance is determined by matching the user's message against specific
- * topic patterns. Each pattern is tied to a concrete set of context fields —
- * not to a broad keyword that might inadvertently select unrelated data.
- *
- * DESIGN NOTES
- * ─────────────
- * • userMessage is treated as untrusted input — it is used only for pattern
- *   matching, never interpolated into queries or evaluated.
- * • Patterns are conservative: they must match the specific domain (sleep,
- *   energy, focus) to which the context field belongs.
- * • If no domain-specific pattern matches, a minimal general summary is
- *   returned (today's wellness + user name) — only if that data exists.
- * • Fields that do not exist in fullContext are never fabricated or defaulted.
- * • This function is isolated so its logic can be extended when Health JSON
- *   adds new context dimensions without touching the Gemini service.
+ * Passes through the full personal context so Gemini receives all available metrics
+ * regardless of specific keyword triggers in userMessage.
  *
  * @param {Object} fullContext  - The merged context from mergeHealthContext().
- * @param {string} userMessage  - The user's raw message (already length-validated).
- * @returns {Object}              The minimal, allowlisted context to send to Gemini.
+ * @param {string} userMessage  - The user's raw message.
+ * @returns {Object}              The personal context to send to Gemini.
  */
 const selectRelevantContext = (fullContext, userMessage) => {
-  // Lowercase for matching only — never used in queries or stored.
-  const msg = userMessage.toLowerCase();
-
-  const selected = {};
-
-  // Always include the user's name if available — used for personalization.
-  if (fullContext.userName) {
-    selected.userName = fullContext.userName;
-  }
-
-  // ── Topic: Sleep ──────────────────────────────────────────────────────────
-  // Patterns: words directly about sleep quality, duration, or rest.
-  // "hours" alone is intentionally NOT a trigger — it is too broad and would
-  // match unrelated phrases like "been working for hours".
-  const sleepPattern = /\b(sleep|slept|sleeping|insomnia|rest|rested|restless|bedtime|woke|awake)\b/;
-  const sleepMatched = sleepPattern.test(msg);
-  if (sleepMatched && fullContext.today?.sleepHours != null) {
-    selected.todaySleepHours = fullContext.today.sleepHours;
-  }
-
-  // ── Topic: Energy / Mood ─────────────────────────────────────────────────
-  // Patterns: subjective energy state or fatigue.
-  const energyPattern = /\b(energy|energized|tired|fatigue|fatigued|exhausted|mood|feeling|feel)\b/;
-  const energyMatched = energyPattern.test(msg);
-  if (energyMatched && fullContext.today?.energyLevel != null) {
-    selected.todayEnergyLevel = fullContext.today.energyLevel;
-  }
-
-  // ── Topic: Focus / Sessions / Productivity ────────────────────────────────
-  // Patterns: focus sessions, work concentration, or productivity.
-  const focusPattern = /\b(focus|focused|focusing|session|sessions|work|working|productivity|productive|concentrate|concentrated|concentrating|distracted|distraction)\b/;
-  const focusMatched = focusPattern.test(msg);
-  if (focusMatched && fullContext.recentFocus) {
-    selected.recentFocus = fullContext.recentFocus;
-  }
-
-  // ── General fallback ─────────────────────────────────────────────────────
-  // If the message didn't match any specific domain, include today's wellness
-  // summary (sleep + energy) if available. This covers general questions like
-  // "How am I doing?" without exposing focus data that wasn't asked about.
-  // Only fields that actually exist are included.
-  const anySpecificMatch = sleepMatched || energyMatched || focusMatched;
-  if (!anySpecificMatch) {
-    if (fullContext.today?.sleepHours != null) {
-      selected.todaySleepHours = fullContext.today.sleepHours;
-    }
-    if (fullContext.today?.energyLevel != null) {
-      selected.todayEnergyLevel = fullContext.today.energyLevel;
-    }
-  }
-
-  return selected;
+  // Always return the full personal context so Gemini is fully personalized
+  return fullContext;
 };
 
-// ─── Exports ─────────────────────────────────────────────────────────────────
 module.exports = {
   buildDbContext,
   mergeHealthContext,
   selectRelevantContext,
 };
+
