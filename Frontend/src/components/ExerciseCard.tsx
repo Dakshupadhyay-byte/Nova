@@ -36,7 +36,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
         {isLoadingHealth ? (
           <div className="py-3 text-[13px] text-[#6d7a77] animate-pulse">
-            Loading health telemetry...
+            Loading health data...
           </div>
         ) : hasRealData ? (
           <div>
@@ -71,7 +71,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
               No health data recorded today.
             </div>
             <div className="text-[11.5px] text-[#94a3b8] mt-1">
-              Sync Health Connect to ingest step & exercise telemetry.
+              Sync Health Connect to see step & exercise data.
             </div>
           </div>
         )}

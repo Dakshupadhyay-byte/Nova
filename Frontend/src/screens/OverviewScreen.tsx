@@ -7,7 +7,6 @@ import { SleepCard } from '../components/SleepCard';
 import { NovaNoticedCard } from '../components/NovaNoticedCard';
 import { NovaAICard } from '../components/NovaAICard';
 import { FocusActivityList } from '../components/FocusActivityList';
-import { NovaLogo } from '../components/NovaLogo';
 import { BioDataModal } from '../components/modals/BioDataModal';
 import { PatternDetailsModal } from '../components/modals/PatternDetailsModal';
 import { CircadianModal } from '../components/modals/CircadianModal';
