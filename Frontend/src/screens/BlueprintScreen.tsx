@@ -46,11 +46,11 @@ export const BlueprintScreen: React.FC = () => {
         const active = result.data.blueprints.find((bp) => bp.status === 'active');
         setActiveBlueprint(active || null);
       } else {
-        setScreenError(result.error?.message || 'Unable to load your blueprint data.');
+        setScreenError(result.error?.message || 'Unable to load your roadmap data.');
       }
     } catch (err: any) {
       console.error('[BLUEPRINT LOAD ERROR]', err);
-      setScreenError('Network error while loading blueprint. Please check your connection.');
+      setScreenError('Network error while loading roadmap. Please check your connection.');
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +85,7 @@ export const BlueprintScreen: React.FC = () => {
 
     const trimmedOutcome = outcome.trim();
     if (!trimmedOutcome) {
-      setFormError('Please enter what you want to achieve with this Blueprint.');
+      setFormError('Please enter what you want to achieve with this Roadmap.');
       return;
     }
     if (trimmedOutcome.length > 500) {
@@ -117,15 +117,15 @@ export const BlueprintScreen: React.FC = () => {
       } else {
         const errCode = result.error?.code;
         if (errCode === 'ACTIVE_BLUEPRINT_EXISTS') {
-          setFormError('You already have an active blueprint. Please complete or refresh it.');
+          setFormError('You already have an active roadmap. Please complete or refresh it.');
           // Reload in case an active blueprint was already created elsewhere
           loadBlueprints();
         } else if (errCode === 'AI_UNAVAILABLE') {
-          setFormError('The AI blueprint generator is temporarily unavailable. Please try again in a moment.');
+          setFormError('The AI roadmap generator is temporarily unavailable. Please try again in a moment.');
         } else if (errCode === 'AI_RATE_LIMITED') {
-          setFormError('The AI blueprint generator is currently busy. Please try again in a few seconds.');
+          setFormError('The AI roadmap generator is currently busy. Please try again in a few seconds.');
         } else {
-          setFormError(result.error?.message || 'Failed to generate blueprint. Please try again.');
+          setFormError(result.error?.message || 'Failed to generate roadmap. Please try again.');
         }
       }
     } catch (err: any) {
@@ -141,7 +141,7 @@ export const BlueprintScreen: React.FC = () => {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[400px] px-6 py-16">
         <div className="w-10 h-10 border-4 border-[#00685F]/30 border-t-[#00685F] rounded-full animate-spin mb-4" />
-        <p className="text-[14px] font-medium text-[#3d4947]">Loading your NOVA Blueprint...</p>
+        <p className="text-[14px] font-medium text-[#3d4947]">Loading your NOVA Roadmap...</p>
       </div>
     );
   }
@@ -154,7 +154,7 @@ export const BlueprintScreen: React.FC = () => {
           <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto">
             <AlertCircle className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-bold text-[#131b2e]">Unable to Load Blueprint</h2>
+          <h2 className="text-xl font-bold text-[#131b2e]">Unable to Load Roadmap</h2>
           <p className="text-[14px] text-[#6d7a77] max-w-md mx-auto">{screenError}</p>
           <button
             onClick={loadBlueprints}
@@ -227,7 +227,7 @@ export const BlueprintScreen: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 text-[12px] font-semibold text-[#00685f] tracking-wide mb-1 font-mono">
               <Compass className="w-3.5 h-3.5" />
-              <span>ACTIVE BLUEPRINT</span>
+              <span>ACTIVE ROADMAP</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-[#131b2e] tracking-tight">
               {activeBlueprint.title}
@@ -410,7 +410,7 @@ export const BlueprintScreen: React.FC = () => {
       <div className="mb-8">
         <div className="flex items-center gap-2 text-[12px] font-semibold text-[#00685f] tracking-wide mb-1 font-mono">
           <Compass className="w-3.5 h-3.5" />
-          <span>NOVA BLUEPRINT</span>
+          <span>NOVA ROADMAP</span>
         </div>
         <h1 className="text-3xl font-bold text-[#131b2e] tracking-tight">
           Create Your Personalized Roadmap
@@ -515,7 +515,7 @@ export const BlueprintScreen: React.FC = () => {
             </div>
             <div>
               <div className="text-[13.5px] font-bold text-[#131b2e]">
-                NOVA AI is generating your Blueprint...
+                NOVA AI is generating your Roadmap...
               </div>
               <div className="text-[12px] text-[#6d7a77] mt-0.5">
                 NOVA is analyzing your recent patterns and crafting your roadmap...
@@ -532,7 +532,7 @@ export const BlueprintScreen: React.FC = () => {
             className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#00685f] hover:bg-[#005049] disabled:bg-[#dae2fd] disabled:text-[#6d7a77] text-white text-[14px] font-bold shadow-md hover:shadow-lg disabled:shadow-none transition-all cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Sparkles className="w-4 h-4 text-white" />
-            <span>{isGenerating ? 'Crafting Roadmap...' : 'Generate Blueprint'}</span>
+            <span>{isGenerating ? 'Crafting Roadmap...' : 'Generate Roadmap'}</span>
             {!isGenerating && <ArrowRight className="w-4 h-4" />}
           </button>
         </div>

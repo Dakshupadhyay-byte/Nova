@@ -35,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'checkin', label: 'Check-in', icon: Activity },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'history', label: 'History', icon: Clock },
-    { id: 'blueprint', label: 'Blueprint', icon: Compass },
+    { id: 'blueprint', label: 'Roadmap', icon: Compass },
   ];
 
   const secondaryNavItems: NavItemConfig[] = [
