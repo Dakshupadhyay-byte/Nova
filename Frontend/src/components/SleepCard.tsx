@@ -7,7 +7,10 @@ interface SleepCardProps {
   onOpenDetails?: () => void;
 }
 
-export const SleepCard: React.FC<SleepCardProps> = ({ onOpenDetails }) => {
+export const SleepCard: React.FC<SleepCardProps> = ({ metrics, onOpenDetails }) => {
+  const hasSleepData = metrics?.sleepHours != null && !isNaN(Number(metrics.sleepHours));
+  const formattedSleepHours = hasSleepData ? Number(metrics.sleepHours).toFixed(1) : '--';
+
   return (
     <div 
       onClick={onOpenDetails}
@@ -21,13 +24,21 @@ export const SleepCard: React.FC<SleepCardProps> = ({ onOpenDetails }) => {
 
         {/* Big number & Status pill */}
         <div className="flex items-baseline gap-2.5">
-          <span className="text-3xl font-extrabold text-[#94a3b8] tracking-tight tabular-nums">
-            --
+          <span className={`text-3xl font-extrabold tracking-tight tabular-nums ${
+            hasSleepData ? 'text-[#131b2e]' : 'text-[#94a3b8]'
+          }`}>
+            {formattedSleepHours}
           </span>
-          <span className="text-[14px] font-semibold text-[#94a3b8]">hrs</span>
+          <span className={`text-[14px] font-semibold ${
+            hasSleepData ? 'text-[#6d7a77]' : 'text-[#94a3b8]'
+          }`}>
+            hrs
+          </span>
           <div className="ml-auto flex flex-col items-end">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-[11px] font-bold tracking-wide">
-              Not Available
+            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${
+              hasSleepData ? 'bg-[#e6f7f4] text-[#00685f]' : 'bg-[#f1f5f9] text-[#64748b]'
+            }`}>
+              {hasSleepData ? 'Logged' : 'Not Available'}
             </span>
           </div>
         </div>

@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { onAuthChange, logOut } from './services/auth';
+import { onAuthChange, logOut, getIdToken } from './services/auth';
+import { getDashboard } from './services/api';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { OverviewScreen } from './screens/OverviewScreen';
@@ -50,6 +51,32 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
     const handleUserUpdate = () => setCurrentUser(getActiveUser());
     window.addEventListener('nova_user_change', handleUserUpdate);
     return () => window.removeEventListener('nova_user_change', handleUserUpdate);
+  }, []);
+
+  // Fetch real user dashboard metrics from GET /api/dashboard
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDashboardMetrics = async () => {
+      try {
+        const token = await getIdToken();
+        if (!token) return;
+        const dashboard = await getDashboard(token);
+        const sleepHours = dashboard?.today?.sleepHours;
+        if (isMounted && sleepHours != null) {
+          setMetrics((prev) => ({
+            ...prev,
+            sleepHours: sleepHours,
+          }));
+        }
+      } catch (err) {
+        console.warn('[DASHBOARD SYNC] Failed to load dashboard metrics:', err);
+      }
+    };
+
+    fetchDashboardMetrics();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // If not authenticated (and done loading), redirect to login
