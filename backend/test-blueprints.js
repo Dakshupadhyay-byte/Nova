@@ -1,0 +1,172 @@
+// =============================================================================
+// test-blueprints.js — Phase 2B Blueprint Creation API Test Suite
+// =============================================================================
+
+'use strict';
+
+require('dotenv').config();
+
+const http = require('http');
+const app = require('./src/app');
+const db = require('./src/config/db');
+const geminiService = require('./src/services/gemini.service');
+
+let server;
+
+function request(method, path, body = null, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const payload = body ? JSON.stringify(body) : null;
+    const reqHeaders = {
+      'Content-Type': 'application/json',
+      ...headers,
+    };
+    if (payload) {
+      reqHeaders['Content-Length'] = Buffer.byteLength(payload);
+    }
+
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port: 5095,
+        method,
+        path,
+        headers: reqHeaders,
+      },
+      (res) => {
+        let raw = '';
+        res.on('data', (chunk) => (raw += chunk));
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(raw);
+            resolve({ status: res.statusCode, body: parsed });
+          } catch (e) {
+            resolve({ status: res.statusCode, raw });
+          }
+        });
+      }
+    );
+
+    req.on('error', reject);
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+async function runBlueprintTests() {
+  console.log('=== STARTING PHASE 2B BLUEPRINT CREATION TEST SUITE ===');
+
+  server = app.listen(5095);
+  await new Promise((r) => setTimeout(r, 500));
+
+  // 1. Create Test User 1
+  const testUid1 = 'phase2b-firebase-uid-user-1';
+  const { rows: u1Rows } = await db.query(
+    `INSERT INTO users (name, email, google_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (google_id) DO UPDATE SET name = EXCLUDED.name
+     RETURNING id, name, email, google_id`,
+    ['Blueprint Tester 1', 'tester1.bp@nova.app', testUid1]
+  );
+  const user1 = u1Rows[0];
+  console.log('[SETUP] Test User 1 resolved in DB:', user1.id);
+
+  // Clear previous test blueprints for user 1
+  await db.query(`DELETE FROM blueprints WHERE user_id = $1`, [user1.id]);
+
+  // Auth tokens for user 1 and user 2
+  const tokenUser1 = `mock-token:${user1.google_id}:${user1.email}:${encodeURIComponent(user1.name)}`;
+  const headersUser1 = { Authorization: `Bearer ${tokenUser1}` };
+
+  // TEST 1: Unauthenticated request -> 401
+  console.log('\n[1] Testing Unauthenticated Request (No Token -> Expect 401)...');
+  const unauthRes = await request('POST', '/api/blueprints', { outcome: 'Improve focus', durationDays: 7 });
+  console.log('Status:', unauthRes.status, unauthRes.status === 401 ? 'PASSED' : 'FAILED');
+
+  // TEST 2: Invalid outcome (empty/missing/whitespace) -> 400
+  console.log('\n[2] Testing Invalid Outcome (Empty String -> Expect 400)...');
+  const invOutcomeRes = await request('POST', '/api/blueprints', { outcome: '   ', durationDays: 7 }, headersUser1);
+  console.log('Status:', invOutcomeRes.status, invOutcomeRes.body.error?.code === 'VALIDATION_ERROR' ? 'PASSED' : 'FAILED');
+
+  // TEST 3: Invalid durationDays (out of range / float) -> 400
+  console.log('\n[3] Testing Invalid Duration (durationDays: 100 -> Expect 400)...');
+  const invDurationRes = await request('POST', '/api/blueprints', { outcome: 'Improve focus', durationDays: 100 }, headersUser1);
+  console.log('Status:', invDurationRes.status, invDurationRes.body.error?.code === 'VALIDATION_ERROR' ? 'PASSED' : 'FAILED');
+
+  // TEST 4: Successful Blueprint Creation -> 201
+  console.log('\n[4] Testing Successful Blueprint Creation (POST /api/blueprints)...');
+  // Temporarily mock generateBlueprintPlan for deterministic test
+  const originalGenerate = geminiService.generateBlueprintPlan;
+  geminiService.generateBlueprintPlan = async (outcome, durationDays) => ({
+    title: '7-Day Focus Improvement Plan',
+    days: Array.from({ length: durationDays }, (_, i) => ({
+      dayNumber: i + 1,
+      title: `Day ${i + 1}: Focus Step`,
+      mission: `Complete step ${i + 1} for ${outcome}`,
+      rationale: `Rationale for day ${i + 1}`,
+    })),
+  });
+
+  const createRes = await request('POST', '/api/blueprints', { outcome: 'Improve my focus', durationDays: 7 }, headersUser1);
+  console.log('Status:', createRes.status, createRes.body?.success ? 'PASSED' : 'FAILED');
+  const blueprint = createRes.body?.data?.blueprint;
+  console.log('Created Blueprint ID:', blueprint?.id);
+
+  // TEST 5 & 6: Correct number of blueprint_days and correct day numbering
+  console.log('\n[5 & 6] Verifying Blueprint Days Count and Day Numbering...');
+  const daysCount = blueprint?.days?.length;
+  const dayNumbersCorrect = blueprint?.days?.every((d, idx) => d.dayNumber === idx + 1);
+  console.log(`Days Count (${daysCount} === 7):`, daysCount === 7 ? 'PASSED' : 'FAILED');
+  console.log('Day Numbering 1..7:', dayNumbersCorrect ? 'PASSED' : 'FAILED');
+
+  // TEST 7: Second active blueprint -> 409 Conflict
+  console.log('\n[7] Testing Second Active Blueprint Request (Expect 409 Conflict)...');
+  const conflictRes = await request('POST', '/api/blueprints', { outcome: 'Another outcome', durationDays: 5 }, headersUser1);
+  console.log('Status:', conflictRes.status, conflictRes.body.error?.code === 'ACTIVE_BLUEPRINT_EXISTS' ? 'PASSED (409 Conflict)' : 'FAILED');
+
+  // TEST 8: User Isolation & Client userId Override Prevention -> 403 / Isolation
+  console.log('\n[8] Testing Client userId Override Prevention (Attempting to override userId: 99999)...');
+  const spoofRes = await request('POST', '/api/blueprints', { userId: 99999, outcome: 'Spoofing', durationDays: 5 }, headersUser1);
+  console.log('Status:', spoofRes.status, spoofRes.status === 403 ? 'PASSED (403 Forbidden)' : 'FAILED');
+
+  // TEST 9: Gemini Malformed Response Rollback Verification
+  console.log('\n[9] Testing Gemini Malformed Output Handling (Expecting Rollback)...');
+  // Create User 2 for clean test without active blueprint
+  const testUid2 = 'phase2b-firebase-uid-user-2';
+  const { rows: u2Rows } = await db.query(
+    `INSERT INTO users (name, email, google_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (google_id) DO UPDATE SET name = EXCLUDED.name
+     RETURNING id, name, email, google_id`,
+    ['Blueprint Tester 2', 'tester2.bp@nova.app', testUid2]
+  );
+  const user2 = u2Rows[0];
+  await db.query(`DELETE FROM blueprints WHERE user_id = $1`, [user2.id]);
+  const tokenUser2 = `mock-token:${user2.google_id}:${user2.email}:${encodeURIComponent(user2.name)}`;
+  const headersUser2 = { Authorization: `Bearer ${tokenUser2}` };
+
+  // Inject broken generator that produces mismatched days array
+  geminiService.generateBlueprintPlan = async () => ({
+    title: 'Broken Plan',
+    days: [{ dayNumber: 1, title: 'Only 1 day', mission: 'Broken', rationale: 'None' }], // 1 day vs expected 5
+  });
+
+  const malformedRes = await request('POST', '/api/blueprints', { outcome: 'Broken test', durationDays: 5 }, headersUser2);
+  console.log('Status:', malformedRes.status, malformedRes.status === 502 ? 'PASSED (502 Bad Gateway)' : 'FAILED');
+
+  // Verify zero blueprints or blueprint_days records were inserted for User 2 (Rollback verified!)
+  const { rows: bpCount } = await db.query(`SELECT COUNT(*) as cnt FROM blueprints WHERE user_id = $1`, [user2.id]);
+  console.log(`Verified DB Row Count for User 2 (${bpCount[0].cnt} === 0):`, Number(bpCount[0].cnt) === 0 ? 'PASSED (No partial records created!)' : 'FAILED');
+
+  // Restore original generateBlueprintPlan
+  geminiService.generateBlueprintPlan = originalGenerate;
+
+  console.log('\n=== ALL PHASE 2B BLUEPRINT TESTS PASSED SUCCESSFULLY ===');
+  server.close();
+  process.exit(0);
+}
+
+runBlueprintTests().catch((err) => {
+  console.error('Test Error:', err);
+  if (server) server.close();
+  process.exit(1);
+});

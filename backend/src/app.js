@@ -38,6 +38,7 @@ const dashboardRouter = require('./routes/dashboard.routes');
 const authRouter          = require('./routes/auth.routes');
 const healthWebhookRouter = require('./routes/healthWebhook.routes');
 const aiRouter            = require('./routes/ai.routes');
+const blueprintsRouter    = require('./routes/blueprints.routes');
 
 // Import middleware
 const requestLogger = require('./middleware/requestLogger');
@@ -83,12 +84,13 @@ app.use(express.urlencoded({ extended: false }));
 //   router.post('/')    → becomes POST /api/sessions
 //   router.get('/:id')  → becomes GET  /api/sessions/:id
 
-app.use('/api/sessions',  sessionsRouter);
-app.use('/api/checkin',   checkinRouter);
-app.use('/api/dashboard', dashboardRouter);
-app.use('/api/auth',      authRouter);   // Google Sign-In authentication
-app.use('/api/health',    healthWebhookRouter);
-app.use('/api/ai',        aiRouter);     // NOVA AI chat endpoint
+app.use('/api/sessions',   sessionsRouter);
+app.use('/api/checkin',    checkinRouter);
+app.use('/api/dashboard',  dashboardRouter);
+app.use('/api/auth',       authRouter);   // Google Sign-In authentication
+app.use('/api/health',     healthWebhookRouter);
+app.use('/api/ai',         aiRouter);     // NOVA AI chat endpoint
+app.use('/api/blueprints', blueprintsRouter); // NOVA AI Blueprint endpoint
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 // A simple endpoint for load balancers and uptime monitors.

@@ -246,6 +246,133 @@ const sendMessage = async (userMessage, selectedContext) => {
   return text.trim();
 };
 
-// Export only the public interface. Internal helpers (_client, getClient) are
-// not exported — they are module-private.
-module.exports = { sendMessage };
+/**
+ * Generates a structured multi-day blueprint plan from Gemini based on user's target outcome,
+ * duration in days, and personalized wellness/focus context.
+ *
+ * @param {string} outcome        - The user's target outcome/goal string.
+ * @param {number} durationDays   - Number of days for the plan (1..90).
+ * @param {Object} selectedContext - Pre-built personal context object.
+ * @returns {Promise<Object>}     - Parsed JSON plan containing title and days array.
+ */
+const generateBlueprintPlan = async (outcome, durationDays, selectedContext) => {
+  const client = getClient();
+
+  const contextLines = [];
+  const name = selectedContext.user?.name || selectedContext.userName;
+  if (name) contextLines.push(`User name: ${name}`);
+  const currentDate = selectedContext.currentDate || selectedContext.temporalContext?.currentDate;
+  if (currentDate) contextLines.push(`Current date: ${currentDate}`);
+
+  if (selectedContext.wellness) {
+    const w = selectedContext.wellness;
+    const parts = [];
+    if (w.todaySleepHours != null) parts.push(`Today's sleep: ${w.todaySleepHours} hours`);
+    if (w.todayEnergyLevel != null) parts.push(`Today's energy level: ${w.todayEnergyLevel}/10`);
+    if (w.avgSleepHours7d != null) parts.push(`7-day avg sleep: ${w.avgSleepHours7d} hours`);
+    if (w.avgEnergyLevel7d != null) parts.push(`7-day avg energy level: ${w.avgEnergyLevel7d}/10`);
+    if (parts.length > 0) contextLines.push(`Wellness: ${parts.join(' | ')}`);
+  }
+
+  if (selectedContext.focus) {
+    const f = selectedContext.focus;
+    const parts = [];
+    if (f.todayMinutes != null || f.todaySessions != null) {
+      parts.push(`Today: ${f.todayMinutes || 0} total mins across ${f.todaySessions || 0} sessions (${f.todayCompleted || 0} completed)`);
+    }
+    if (f.totalSessionsLast7Days > 0) {
+      let f7 = `Last 7 days: ${f.totalSessionsLast7Days} sessions (${f.completedLast7Days} completed`;
+      if (f.completionRatePercent != null) f7 += `, ${f.completionRatePercent}% completion rate`;
+      f7 += `), ${f.totalMinutesLast7Days} total mins`;
+      if (f.avgInterruptionsLast7Days != null) f7 += `, avg ${f.avgInterruptionsLast7Days} interruptions/session`;
+      parts.push(f7);
+    }
+    if (f.mostRecentSession) {
+      const m = f.mostRecentSession;
+      parts.push(`Most recent session: ${m.durationMinutes} mins (${m.completed ? 'completed' : 'incomplete'}), started at ${m.startedAt}, ${m.interruptions} interruptions`);
+    }
+    if (parts.length > 0) contextLines.push(`Focus: ${parts.join(' | ')}`);
+  }
+
+  if (selectedContext.health) {
+    const h = selectedContext.health;
+    const parts = [];
+    if (h.todaySteps != null) parts.push(`Today's steps: ${h.todaySteps}`);
+    if (h.todayActiveExerciseMinutes != null) parts.push(`Today's exercise: ${h.todayActiveExerciseMinutes} mins`);
+    if (h.todayExerciseDistanceMeters != null) parts.push(`Today's distance: ${h.todayExerciseDistanceMeters} meters`);
+    if (h.totalSteps7d != null && Number(h.totalSteps7d) > 0) {
+      parts.push(`7-day steps total: ${h.totalSteps7d} (avg ${h.avgSteps7d}/day)`);
+    }
+    if (parts.length > 0) contextLines.push(`Health: ${parts.join(' | ')}`);
+  }
+
+  const contextPreamble = contextLines.length > 0
+    ? `[User context]\n${contextLines.join('\n')}\n\n`
+    : '[No user context available]\n\n';
+
+  const prompt = `${contextPreamble}` +
+    `Goal Outcome: "${outcome}"\n` +
+    `Duration: ${durationDays} days\n\n` +
+    `Create a personalized ${durationDays}-day roadmap JSON to help the user achieve this outcome. ` +
+    `You MUST respond ONLY with a valid JSON object matching this exact schema:\n` +
+    `{\n` +
+    `  "title": "A short, motivating blueprint title",\n` +
+    `  "days": [\n` +
+    `    {\n` +
+    `      "dayNumber": 1,\n` +
+    `      "title": "Short title for Day 1",\n` +
+    `      "mission": "Actionable daily mission",\n` +
+    `      "rationale": "Reason based on user context/goal"\n` +
+    `    }\n` +
+    `  ]\n` +
+    `}\n` +
+    `The days array MUST contain exactly ${durationDays} objects with dayNumber sequentially numbered from 1 to ${durationDays}.`;
+
+  console.log('[AI] Requesting Blueprint generation from Gemini (%d days)', durationDays);
+
+  let response;
+  try {
+    response = await client.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+      config: {
+        systemInstruction: NOVA_SYSTEM_INSTRUCTIONS + '\nOutput ONLY valid raw JSON matching the requested structure.',
+        maxOutputTokens: 2048,
+        responseMimeType: 'application/json',
+      },
+    });
+  } catch (sdkErr) {
+    console.error('[AI] Gemini Blueprint generation SDK error:', sdkErr.message);
+    const normalized = new Error('Gemini request failed.');
+    normalized.code = 'GEMINI_REQUEST_FAILED';
+    if (sdkErr.status === 429 || (sdkErr.message && sdkErr.message.includes('429'))) {
+      normalized.code = 'GEMINI_RATE_LIMITED';
+    }
+    throw normalized;
+  }
+
+  const text = response.text;
+  if (!text || typeof text !== 'string' || text.trim() === '') {
+    console.error('[AI] Gemini returned an empty blueprint response.');
+    const err = new Error('Gemini returned an empty response.');
+    err.code = 'GEMINI_EMPTY_RESPONSE';
+    throw err;
+  }
+
+  let parsed;
+  try {
+    const cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+    parsed = JSON.parse(cleanedText);
+  } catch (parseErr) {
+    console.error('[AI] Failed to parse Gemini blueprint response as JSON:', parseErr.message);
+    const err = new Error('Gemini output invalid JSON.');
+    err.code = 'GEMINI_MALFORMED_RESPONSE';
+    throw err;
+  }
+
+  return parsed;
+};
+
+// Export public interface.
+module.exports = { sendMessage, generateBlueprintPlan };
+
