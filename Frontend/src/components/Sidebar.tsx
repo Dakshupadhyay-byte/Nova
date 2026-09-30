@@ -56,19 +56,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         onClick={() => onSelectTab(item.id)}
         title={item.label}
         aria-label={item.label}
-        className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-150 text-left group cursor-pointer ${
+        className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-[13.5px] font-medium transition-all duration-200 text-left group cursor-pointer relative ${
           isActive
-            ? 'bg-[#e2f5f1] text-[#00685f] font-semibold border border-[#99dfd5]/50 shadow-xs'
+            ? 'bg-[#00685f]/12 text-[#00685f] font-bold border border-[#00685f]/30 shadow-sm shadow-[#00685f]/10 scale-[1.01]'
             : isAi
-            ? 'text-[#3d4947] hover:bg-[#f6f4fe] hover:text-[#131b2e]'
-            : 'text-[#3d4947] hover:bg-[#f0f2fd] hover:text-[#131b2e]'
+            ? 'text-[#3d4947] hover:bg-[#712ae2]/10 hover:text-[#712ae2] hover:translate-x-1.5'
+            : 'text-[#3d4947] hover:bg-[#00685f]/8 hover:text-[#00685f] hover:translate-x-1.5'
         }`}
       >
+        {isActive && (
+          <span className="absolute left-0 top-2 bottom-2 w-1 bg-[#00685f] rounded-r-full shadow-sm shadow-[#00685f]/50" />
+        )}
         <div className="w-[22px] h-[22px] flex items-center justify-center shrink-0">
           {isAi ? (
             <NovaLogo 
               size={22} 
-              className="shrink-0 object-contain transition-transform duration-150 group-hover:scale-105" 
+              className="shrink-0 object-contain transition-transform duration-180 group-hover:scale-108" 
             />
           ) : (
             item.icon && (
@@ -86,36 +89,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="w-full md:w-64 shrink-0 bg-[#faf8ff] border-b md:border-b-0 md:border-r border-[#e2e7ff]/80 flex flex-col justify-between p-4 md:p-5 md:min-h-screen select-none">
-      <div className="flex flex-col">
+    <aside className="w-full md:w-64 shrink-0 glass-strong border-b md:border-b-0 md:border-r border-[#dae2fd]/80 flex flex-col justify-between p-3.5 md:p-5 md:min-h-screen select-none z-[20] overflow-x-auto md:overflow-y-auto">
+      <div className="flex flex-row md:flex-col items-center md:items-stretch justify-between md:justify-start w-full">
         {/* Brand Lockup */}
         <div 
           onClick={() => onSelectTab('overview')}
-          className="flex items-center gap-3 px-2 py-3 mb-6 cursor-pointer group"
+          className="flex items-center gap-3 px-2 py-2 md:py-3 mb-0 md:mb-6 cursor-pointer group shrink-0"
         >
           <div className="flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105">
             <NovaLogo size="md" />
           </div>
           <div className="flex flex-col">
-            <span className="text-[17px] font-bold tracking-tight text-[#131b2e] leading-tight">
+            <span className="text-[16px] md:text-[17px] font-bold tracking-tight text-[#131b2e] leading-tight">
               NOVA
             </span>
-            <span className="text-[10px] font-semibold tracking-wider text-[#00685f] uppercase leading-none mt-0.5">
+            <span className="text-[9.5px] md:text-[10px] font-semibold tracking-wider text-[#00685f] uppercase leading-none mt-0.5 hidden sm:block">
               NOTICE. ORGANIZE. VISUALIZE. ACT.
             </span>
           </div>
         </div>
 
         {/* Navigation List */}
-        <nav className="space-y-1.5" aria-label="Main Navigation">
+        <nav className="flex flex-row md:flex-col gap-1 md:gap-1.5 overflow-x-auto md:overflow-visible no-scrollbar py-1" aria-label="Main Navigation">
           {mainNavItems.map(renderNavItem)}
         </nav>
 
         {/* Divider */}
-        <div className="my-4 border-t border-[#e2e7ff]/80" />
+        <div className="hidden md:block my-4 border-t border-[#dae2fd]/80" />
 
         {/* Secondary / Settings Navigation */}
-        <nav className="space-y-1.5" aria-label="Settings Navigation">
+        <nav className="hidden md:flex flex-col space-y-1.5" aria-label="Settings Navigation">
           {secondaryNavItems.map(renderNavItem)}
         </nav>
       </div>

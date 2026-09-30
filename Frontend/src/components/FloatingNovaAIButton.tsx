@@ -38,7 +38,7 @@ export const FloatingNovaAIButton: React.FC<FloatingNovaAIButtonProps> = ({ onOp
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed right-4 bottom-4 sm:right-8 sm:bottom-8 z-50 w-[170px] h-[66px] sm:w-[210px] sm:h-[74px] px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-full bg-white/95 backdrop-blur-md border border-[#E5EBE9] hover:border-[#7C5CFC]/40 shadow-xl hover:shadow-2xl shadow-[#7C5CFC]/15 hover:shadow-[#7C5CFC]/25 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.03] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#7C5CFC] flex items-center justify-between cursor-pointer group select-none overflow-hidden"
+      className="fixed right-4 bottom-4 sm:right-8 sm:bottom-8 z-[30] w-[170px] h-[64px] sm:w-[210px] sm:h-[72px] px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-full glass-strong border border-[#dae2fd] hover:border-[#7C5CFC]/50 shadow-xl hover:shadow-2xl shadow-[#7C5CFC]/15 hover:shadow-[#7C5CFC]/30 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.03] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#7C5CFC] flex items-center justify-between cursor-pointer group select-none overflow-hidden"
     >
       {/* Soft Ambient AI Aura */}
       <motion.div

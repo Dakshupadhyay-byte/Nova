@@ -145,11 +145,17 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
   };
 
   return (
-    <div className="h-screen bg-[#faf8ff] text-[#131b2e] flex flex-col md:flex-row antialiased overflow-hidden">
+    <div className="h-screen bg-[#faf8ff] text-[#131b2e] flex flex-col md:flex-row antialiased overflow-hidden relative">
+      {/* Dynamic Ambient Background Mesh */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-[700px] h-[700px] bg-gradient-to-br from-[#00685f]/15 via-[#99dfd5]/10 to-transparent blur-[130px] rounded-full animate-pulse" style={{ animationDuration: '14s' }} />
+        <div className="absolute top-1/3 -right-40 w-[600px] h-[600px] bg-gradient-to-bl from-[#712ae2]/12 via-[#f4f0ff]/8 to-transparent blur-[140px] rounded-full" />
+        <div className="absolute -bottom-40 left-1/3 w-[800px] h-[500px] bg-gradient-to-tr from-[#008378]/10 via-[#e2f5f1]/15 to-transparent blur-[140px] rounded-full" />
+      </div>
       <Sidebar currentTab={currentTab} onSelectTab={handleSelectTab} quantumSync={metrics.quantumSyncPercent} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header user={currentUser} onSearch={q => setSearchQuery(q)} onNavigate={handleSelectTab} onOpenSettings={() => handleSelectTab('settings')} onLockTerminal={handleLockTerminal} />
-        <main className={`flex-1 flex flex-col min-h-0 ${currentTab === 'nova-ai' ? 'overflow-hidden' : 'overflow-y-auto pb-16'}`}>
+        <main key={currentTab} className={`flex-1 flex flex-col min-h-0 page-fade-in ${currentTab === 'nova-ai' ? 'overflow-hidden' : 'overflow-y-auto pb-16'}`}>
           {currentTab === 'overview' && (
             <OverviewScreen
               metrics={metrics}
@@ -159,6 +165,7 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
               onOpenNovaAI={() => handleSelectTab('nova-ai')}
               onOpenSimulator={() => handleSelectTab('simulator')}
               searchQuery={searchQuery}
+              userName={currentUser.name}
             />
           )}
           {currentTab === 'focus' && <FocusScreen onBackToOverview={() => handleSelectTab('overview')} onSessionComplete={handleSessionComplete} />}

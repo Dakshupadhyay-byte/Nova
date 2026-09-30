@@ -126,11 +126,40 @@ export const Header: React.FC<HeaderProps> = ({
     else if (e.key === 'Escape') { setSearchVal(''); setIsFocused(false); inputRef.current?.blur(); }
   };
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target && target.scrollTop !== undefined) {
+        setIsScrolled(target.scrollTop > 10);
+      } else {
+        setIsScrolled(window.scrollY > 10);
+      }
+    };
+
+    // Attach to scrollable main container or window
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      if (mainEl) mainEl.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   const markAllRead = () => setNotifications((p) => p.map((n) => ({ ...n, read: true })));
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <header className="h-16 px-6 border-b border-[#e2e7ff]/80 bg-[#faf8ff]/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-30 shrink-0">
+    <header className={`h-16 px-4 sm:px-6 border-b flex items-center justify-between sticky top-0 z-[20] shrink-0 transition-all duration-300 ${
+      isScrolled
+        ? 'bg-white/94 backdrop-blur-2xl border-[#dae2fd] shadow-md shadow-[#00685f]/8'
+        : 'bg-white/65 backdrop-blur-md border-transparent shadow-none'
+    }`}>
 
       {/* Search + Dropdown */}
       <div ref={containerRef} className="relative w-full max-w-lg">
@@ -147,21 +176,21 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label="Search NOVA features"
             aria-haspopup="listbox"
             aria-expanded={isFocused}
-            className="w-full pl-10 pr-12 py-2 text-[13.5px] bg-[#f0f3fd]/80 hover:bg-[#ebf0fd] focus:bg-white text-[#131b2e] placeholder-[#6d7a77] rounded-xl border border-[#dae2fd] focus:border-[#00685f] focus:ring-2 focus:ring-[#00685f]/15 focus:outline-none transition-all duration-150"
+            className="w-full pl-10 pr-12 py-2 text-[13.5px] nova-input"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
             {searchVal ? (
-              <button onClick={() => { setSearchVal(''); onSearch?.(''); inputRef.current?.focus(); }} aria-label="Clear search" className="w-5 h-5 flex items-center justify-center text-[#9BA8A5] hover:text-[#131b2e] transition-colors">
+              <button onClick={() => { setSearchVal(''); onSearch?.(''); inputRef.current?.focus(); }} aria-label="Clear search" className="w-5 h-5 flex items-center justify-center text-[#9BA8A5] hover:text-[#131b2e] transition-colors cursor-pointer">
                 <X className="w-3.5 h-3.5" />
               </button>
             ) : (
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-[#6d7a77] bg-white/70 border border-[#dae2fd] rounded-md shadow-2xs pointer-events-none">⌘K</kbd>
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-[#6d7a77] bg-white/80 border border-[#dae2fd] rounded-md shadow-2xs pointer-events-none">⌘K</kbd>
             )}
           </div>
         </div>
 
         {isFocused && (
-          <div role="listbox" aria-label="Search results" className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#dae2fd] rounded-2xl shadow-xl z-50 overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(0,102,95,0.08), 0 2px 8px rgba(0,0,0,0.06)' }}>
+          <div role="listbox" aria-label="Search results" className="absolute top-full left-0 right-0 mt-2 glass-strong rounded-2xl shadow-xl z-[40] overflow-hidden" style={{ boxShadow: '0 12px 40px rgba(0,102,95,0.12), 0 4px 12px rgba(0,0,0,0.06)' }}>
             <div className="px-4 pt-3 pb-1.5 border-b border-[#f0f3fd]">
               <span className="text-[10.5px] font-bold text-[#6d7a77] tracking-widest uppercase">{searchVal.trim() ? 'Features' : 'Quick Access'}</span>
             </div>

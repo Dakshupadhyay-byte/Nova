@@ -1,34 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { Target, ArrowRight } from 'lucide-react';
+import { getActiveUser } from '../data/mockData';
 
 interface WelcomeBannerProps {
   onStartFocus: () => void;
   syncCycle: number;
+  userName?: string;
 }
 
-const getGreetingData = () => {
+const getGreetingText = () => {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) {
-    return { text: 'Good morning', icon: '👋' };
+    return 'Good morning';
   }
   if (hour >= 12 && hour < 17) {
-    return { text: 'Good afternoon', icon: '👋' };
+    return 'Good afternoon';
   }
   if (hour >= 17 && hour < 21) {
-    return { text: 'Good evening', icon: '👋' };
+    return 'Good evening';
   }
-  return { text: 'Good night', icon: '🌙' };
+  return 'Good night';
 };
 
 export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
   onStartFocus,
   syncCycle,
+  userName,
 }) => {
-  const [greeting, setGreeting] = useState(getGreetingData);
+  const [greetingPrefix, setGreetingPrefix] = useState(getGreetingText);
+  const [name, setName] = useState<string>(() => userName || getActiveUser().name);
+
+  useEffect(() => {
+    if (userName) {
+      setName(userName);
+    }
+  }, [userName]);
+
+  useEffect(() => {
+    const handleUserChange = () => {
+      if (!userName) {
+        setName(getActiveUser().name);
+      }
+    };
+    window.addEventListener('nova_user_change', handleUserChange);
+    return () => window.removeEventListener('nova_user_change', handleUserChange);
+  }, [userName]);
 
   useEffect(() => {
     const updateGreeting = () => {
-      setGreeting(getGreetingData());
+      setGreetingPrefix(getGreetingText());
     };
 
     const interval = setInterval(updateGreeting, 60000);
@@ -42,11 +62,8 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
         <div>
           {/* Greeting */}
           <h1 className="text-3xl lg:text-[34px] font-bold text-[#131b2e] tracking-tight leading-tight">
-            {greeting.text} {greeting.icon} Here's your focus & wellness overview.
+            {greetingPrefix}, {name}.
           </h1>
-          <p className="text-[14px] text-[#3d4947] max-w-2xl mt-1.5 leading-relaxed">
-            See how your focus, sleep, and energy are shaping your day.
-          </p>
         </div>
       </div>
 

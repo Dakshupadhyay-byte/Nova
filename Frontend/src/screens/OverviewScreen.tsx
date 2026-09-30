@@ -23,6 +23,7 @@ interface OverviewScreenProps {
   onOpenNovaAI: () => void;
   onOpenSimulator: () => void;
   searchQuery: string;
+  userName?: string;
 }
 
 export const OverviewScreen: React.FC<OverviewScreenProps> = ({
@@ -33,6 +34,7 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
   onOpenNovaAI,
   onOpenSimulator,
   searchQuery,
+  userName,
 }) => {
   const [isBioModalOpen, setIsBioModalOpen] = useState(false);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
@@ -90,12 +92,13 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
       <WelcomeBanner
         onStartFocus={onStartFocus}
         syncCycle={metrics.syncCycle}
+        userName={userName}
       />
 
       {/* Main Grid: Left Column (7 cols) + Right Column (5 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Concentric Rings + Weekly Focus Velocity */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-6 stagger-1">
           <ConcentricRings
             metrics={metrics}
             todayHealth={todayHealth}
@@ -109,7 +112,7 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
         </div>
 
         {/* Right Column: Today's Exercise & Sleep, Nova Noticed, Today's Focus Activity */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-5 space-y-6 stagger-2">
           {/* 2-column cards side-by-side: Exercise and Sleep */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <ExerciseCard
@@ -143,7 +146,7 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
         </div>
 
         {/* Flagship NOVA AI Feature Showcase Banner (spanning 12 columns) */}
-        <div className="lg:col-span-12 mt-2">
+        <div className="lg:col-span-12 mt-2 stagger-3">
           <NovaAICard onOpenNovaAI={onOpenNovaAI} />
         </div>
       </div>
