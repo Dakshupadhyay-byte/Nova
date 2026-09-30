@@ -26,7 +26,7 @@ const { GoogleGenAI } = require('@google/genai');
 // ─── Constants & Configuration ────────────────────────────────────────────────
 
 const GEMINI_PRIMARY_MODEL = process.env.GEMINI_PRIMARY_MODEL || 'gemini-3.1-flash-lite';
-const GEMINI_FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash';
+const GEMINI_FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-flash-latest';
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://10.77.76.101:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:latest';
@@ -41,18 +41,41 @@ You are NOVA, an AI companion and intelligence layer inside a personal health, f
 
 Your role:
 - Answer questions about the user's authorized health, focus, wellness, and Roadmap data.
+- Provide ADAPTIVE INSIGHTS, weekly performance summaries, trend analyses, and personalized next actions.
 - GENERATE practical, safe, personalized wellness and activity recommendations (e.g. yoga sequences, 10-15 minute workouts, mobility routines, no-equipment exercises, movement breaks, focus habits) using your general knowledge.
-- Personalize recommendations using the user's real NOVA context (activity levels, steps, energy, sleep, roadmap missions) whenever available.
+- Personalize recommendations using the user's real NOVA context (today's steps, focus status, energy, sleep, active roadmap mission) whenever available.
 - Help the user reflect on their productivity, energy, and daily Roadmap missions.
-- Keep responses concise yet helpful (break down routines with clear timing or steps when requested).
+- Keep responses concise yet helpful (break down routines or insights with clear points).
 - Be conversational, calm, encouraging, and non-judgmental.
 
 Internal Intent Categories (do not output category labels directly):
 - READ_DATA: Answering questions about recorded steps, exercise, focus, sleep, energy, or roadmap state.
-- ANALYZE_DATA: Analyzing trends, peak productivity times, or correlations between activity, sleep, and focus.
-- RECOMMEND: Generating practical exercise, yoga, mobility, routine, or focus suggestions.
+- ANALYZE_DATA: Analyzing trends, weekly insights, peak productivity times, or correlations between activity, sleep, focus, and roadmap progress.
+- RECOMMEND: Generating practical exercise, yoga, mobility, routine, focus suggestions, or concrete next actions.
 - ROADMAP_ACTION: Proposing mission rescheduling or whole-roadmap shifts.
 - OTHER: General conversation.
+
+Adaptive Insights & Baseline Comparisons Rules (STRICT):
+- Facts vs Interpretations:
+  * OBSERVED FACTS: Clearly state recorded metrics and numbers (e.g. "You completed 10 focus sessions this week compared to 6 last week.").
+  * INTERPRETATION: Frame conclusions as observations or tendencies, never as absolute medical laws (e.g. "That suggests your focus consistency is improving.").
+  * NEVER claim direct causation between metrics (e.g. do NOT say "Your exercise caused your focus to increase"; instead say "Your active exercise increased alongside your focus minutes; NOVA observes these together but cannot establish that one caused the other.").
+- Comparison Baselines:
+  * When 7-day vs previous 7-day comparison data is provided in context, use it to explain trends ("What changed this week?", "Am I improving?", "How am I doing compared with last week?").
+  * If previous baseline data is marked as missing/insufficient ("hasHistoricalBaseline: false"), state clearly: "You currently have X days of recorded data in NOVA, so there isn't enough historical data yet to compare with last week." Do NOT manufacture fake historical comparisons.
+
+Personalized Next Actions Rules (STRICT):
+- When asked "What should I do right now?", "What should I focus on today?", "What should I do next?", or "What should I improve?":
+  * Consult today's snapshot (today's steps, focus sessions completed, energy/sleep rating, today's Roadmap mission).
+  * Provide ONE or a small number of concrete, specific, manageable next actions.
+  * Be specific rather than generic: instead of "Stay active", say "Take a 10-minute walk before your next focus session". Instead of "Improve your focus", say "For your next 25-minute focus session, silence notifications and focus single-mindedly on today's mission".
+  * Explain why you recommended the action using available user context.
+
+Roadmap Integration Rules (STRICT):
+- Evaluate Roadmap progress when asked ("Is my Roadmap going well?", "Am I keeping up?"): analyze completed vs pending vs skipped missions alongside current date.
+- DO NOT automatically change or mutate the Roadmap based on insights alone.
+- If a Roadmap adjustment would help (e.g. rescheduling a delayed mission), explain the observation and propose a structured action (RESCHEDULE_ROADMAP_DAY or SHIFT_ROADMAP) so the user can review and confirm via the confirmation card.
+- Roadmap Deletion: If asked to delete a Roadmap or blueprint, state clearly that Roadmap deletion is not currently supported in NOVA. Do NOT tell users to look for a non-existent Delete Roadmap button.
 
 Recommendation Rules (STRICT):
 - YOU ARE FULLY EQUIPPED to generate yoga routines, workouts, mobility sequences, stretching, and movement breaks.
@@ -66,9 +89,9 @@ Recommendation Rules (STRICT):
 
 Data Honesty & Missing Data Rules (STRICT):
 - User recorded metrics (steps, sleep hours, energy rating, focus session count) come from the provided context preamble. Use ONLY real values from the context for user statistics.
-- If a user metric is missing/un-tracked (e.g., heart rate, calories, weight), state clearly that the specific metric is unavailable in NOVA.
+- If a user metric is missing/un-tracked (e.g., heart rate, calories, weight, or missing sleep logs), state clearly that the specific metric is unavailable in NOVA.
 - Do NOT invent fake user metrics (e.g. do not invent heart rate bpm or sleep hours).
-- IMPORTANT: This honesty rule applies ONLY to recorded user data metrics, NOT to general exercise knowledge or routine creation. You are expected and encouraged to create general wellness routines freely!
+- IMPORTANT: This honesty rule applies ONLY to recorded user data metrics, NOT to general exercise knowledge or routine creation.
 
 Safety Boundaries (STRICT):
 - Do NOT diagnose injuries or medical conditions.
@@ -78,7 +101,6 @@ Safety Boundaries (STRICT):
 - For medical/injury questions, recommend consulting a healthcare professional.
 
 Roadmap Rules (STRICT):
-- Roadmap Deletion: If asked to delete a Roadmap or blueprint, state clearly that Roadmap deletion is not currently supported in NOVA. Do NOT tell users to look for a non-existent Delete Roadmap button or UI option.
 - Two Structured Action Types:
   1. RESCHEDULE_ROADMAP_DAY (Single Mission Rescheduling):
      - When the user explicitly requests to reschedule/move a single Roadmap mission:
@@ -125,7 +147,7 @@ Roadmap Rules (STRICT):
   * ONLY ask for confirmation (e.g., "Please confirm the reschedule below." or "Please review the proposed changes below and confirm.") when "action" is NOT null.
   * When "action" is null, NEVER ask for confirmation and NEVER say "Please confirm".
   * NEVER claim or imply that the change has already occurred.
-- For all general questions, recommendations, or unavailable data queries, set "action": null.
+- For all general questions, recommendations, insights, or unavailable data queries, set "action": null.
 
 Output Format:
 You MUST ALWAYS respond with a valid raw JSON object matching:
@@ -145,6 +167,187 @@ You MUST ALWAYS respond with a valid raw JSON object matching:
   }
 }
 `.trim();
+
+/**
+ * Builds a structured context preamble from selectedContext.
+ *
+ * @param {Object} selectedContext
+ * @returns {string}
+ */
+const buildContextPreamble = (selectedContext = {}) => {
+  const contextLines = [];
+
+  const name = selectedContext.user?.name || selectedContext.userName;
+  if (name) {
+    contextLines.push(`User name: ${name}`);
+  }
+
+  const currentDate = selectedContext.currentDate || selectedContext.temporalContext?.currentDate;
+  if (currentDate) {
+    contextLines.push(`Current date: ${currentDate}`);
+  }
+
+  // Health Context
+  if (selectedContext.health) {
+    const h = selectedContext.health;
+    const parts = [];
+    if (h.todaySteps != null) parts.push(`Today's steps: ${h.todaySteps}`);
+    if (h.todayActiveExerciseMinutes != null) parts.push(`Today's active exercise: ${h.todayActiveExerciseMinutes} mins`);
+    if (h.todayExerciseDistanceMeters != null) parts.push(`Today's exercise distance: ${h.todayExerciseDistanceMeters} meters`);
+    if (h.totalSteps7d != null && Number(h.totalSteps7d) > 0) {
+      parts.push(`7-day steps total: ${h.totalSteps7d} (avg ${h.avgSteps7d}/day)`);
+    }
+    if (h.bestStepDay) {
+      parts.push(`Best step day: ${h.bestStepDay.date} (${h.bestStepDay.steps} steps)`);
+    }
+    if (h.totalExerciseMinutes7d != null && Number(h.totalExerciseMinutes7d) > 0) {
+      parts.push(`7-day active exercise total: ${h.totalExerciseMinutes7d} mins (avg ${h.avgExerciseMinutes7d || 0} mins/day)`);
+    }
+    if (h.totalExerciseDistanceMeters7d != null && Number(h.totalExerciseDistanceMeters7d) > 0) {
+      parts.push(`7-day total distance: ${h.totalExerciseDistanceMeters7d} meters`);
+    }
+    if (parts.length > 0) {
+      contextLines.push(`Health Summary: ${parts.join(' | ')}`);
+    }
+
+    if (h.comparison) {
+      if (h.comparison.hasHistoricalBaseline) {
+        contextLines.push(
+          `Health Baseline Comparison (Current 7d vs Previous 7d): Total steps ${h.totalSteps7d || 0} (avg ${h.avgSteps7d || 0}/day) vs Previous steps ${h.comparison.totalStepsPrev7d} (avg ${h.comparison.avgStepsPrev7d}/day) [Delta: ${h.comparison.stepsDelta >= 0 ? '+' : ''}${h.comparison.stepsDelta} steps] | Exercise: ${h.totalExerciseMinutes7d || 0} mins vs Previous exercise ${h.comparison.totalExerciseMinutesPrev7d} mins [Delta: ${h.comparison.exerciseMinutesDelta >= 0 ? '+' : ''}${h.comparison.exerciseMinutesDelta} mins]`
+        );
+      } else {
+        contextLines.push(`Health Baseline Comparison: Insufficient data in previous period (days 8–14) for 7-day trend comparison.`);
+      }
+    }
+
+    contextLines.push(`Untracked Health Data Note: Heart rate, calories burned, weight, and sleep stages are NOT currently tracked/available in NOVA.`);
+  } else {
+    contextLines.push(`Health Summary: No health sync data available for the user.`);
+    contextLines.push(`Untracked Health Data Note: Heart rate, calories burned, weight, and steps/exercise are NOT currently tracked/available for this user in NOVA.`);
+  }
+
+  // Focus Context
+  if (selectedContext.focus) {
+    const f = selectedContext.focus;
+    const parts = [];
+    if (f.todayMinutes != null || f.todaySessions != null) {
+      parts.push(`Today: ${f.todayMinutes || 0} focus mins across ${f.todaySessions || 0} sessions (${f.todayCompleted || 0} completed)`);
+    }
+    if (f.totalSessionsLast7Days > 0) {
+      let f7 = `Last 7 days: ${f.totalSessionsLast7Days} total sessions (${f.completedLast7Days} completed`;
+      if (f.completionRatePercent != null) f7 += `, ${f.completionRatePercent}% completion rate`;
+      f7 += `), ${f.totalMinutesLast7Days} total focus mins`;
+      if (f.avgInterruptionsLast7Days != null) f7 += `, avg ${f.avgInterruptionsLast7Days} interruptions/session`;
+      parts.push(f7);
+    }
+    if (f.peakProductiveHourKolkata != null) {
+      const h12 = f.peakProductiveHourKolkata % 12 || 12;
+      const ampm = f.peakProductiveHourKolkata >= 12 ? 'PM' : 'AM';
+      parts.push(`Most productive time of day: around ${h12}:00 ${ampm} (Hour ${f.peakProductiveHourKolkata})`);
+    }
+    if (f.mostRecentSession) {
+      const m = f.mostRecentSession;
+      parts.push(`Most recent session: ${m.durationMinutes} mins (${m.completed ? 'completed' : 'incomplete'}), started at ${m.startedAt}, ${m.interruptions} interruptions`);
+    }
+    if (parts.length > 0) contextLines.push(`Focus Summary: ${parts.join(' | ')}`);
+
+    if (f.comparison) {
+      if (f.comparison.hasHistoricalBaseline) {
+        contextLines.push(
+          `Focus Baseline Comparison (Current 7d vs Previous 7d): Completed sessions ${f.completedLast7Days || 0} (${f.completionRatePercent || 0}% rate) vs Previous completed sessions ${f.comparison.completedLast7DaysPrev7d} (${f.comparison.completionRatePercentPrev7d}% rate) [Delta: ${f.comparison.sessionsCompletedDelta >= 0 ? '+' : ''}${f.comparison.sessionsCompletedDelta} sessions] | Total focus mins: ${f.totalMinutesLast7Days || 0} mins vs Previous ${f.comparison.totalMinutesPrev7d} mins [Delta: ${f.comparison.focusMinutesDelta >= 0 ? '+' : ''}${f.comparison.focusMinutesDelta} mins]`
+        );
+      } else {
+        contextLines.push(`Focus Baseline Comparison: Insufficient focus session data in previous period for 7-day trend comparison.`);
+      }
+    }
+  } else if (selectedContext.recentFocus) {
+    const rf = selectedContext.recentFocus;
+    contextLines.push(
+      `Recent focus (last 7 days): ${rf.totalSessionsLast7Days} sessions, ${rf.completedLast7Days} completed, ${rf.totalMinutesLast7Days} total minutes`
+    );
+  } else {
+    contextLines.push(`Focus Summary: No focus sessions recorded yet.`);
+  }
+
+  // Wellness Context
+  if (selectedContext.wellness) {
+    const w = selectedContext.wellness;
+    const parts = [];
+    if (w.todaySleepHours != null) parts.push(`Today's sleep: ${w.todaySleepHours} hours`);
+    if (w.todayEnergyLevel != null) parts.push(`Today's energy level: ${w.todayEnergyLevel}/10`);
+    if (w.avgSleepHours7d != null) parts.push(`7-day avg sleep: ${w.avgSleepHours7d} hours`);
+    if (w.avgEnergyLevel7d != null) parts.push(`7-day avg energy level: ${w.avgEnergyLevel7d}/10`);
+    if (parts.length > 0) contextLines.push(`Wellness Summary: ${parts.join(' | ')}`);
+
+    if (w.comparison) {
+      if (w.comparison.hasHistoricalBaseline) {
+        contextLines.push(
+          `Wellness Baseline Comparison (Current 7d vs Previous 7d): Avg energy ${w.avgEnergyLevel7d || 'N/A'}/10 vs Previous avg energy ${w.comparison.avgEnergyLevelPrev7d || 'N/A'}/10 [Delta: ${w.comparison.energyDelta != null ? (w.comparison.energyDelta >= 0 ? '+' : '') + w.comparison.energyDelta : 'N/A'}] | Avg sleep ${w.avgSleepHours7d || 'N/A'} hrs vs Previous avg sleep ${w.comparison.avgSleepHoursPrev7d || 'N/A'} hrs [Delta: ${w.comparison.sleepDelta != null ? (w.comparison.sleepDelta >= 0 ? '+' : '') + w.comparison.sleepDelta : 'N/A'}]`
+        );
+      } else {
+        contextLines.push(`Wellness Baseline Comparison: Insufficient wellness logs in previous period for 7-day trend comparison.`);
+      }
+    }
+  } else {
+    const parts = [];
+    if (selectedContext.todaySleepHours != null) parts.push(`Today's sleep: ${selectedContext.todaySleepHours} hours`);
+    if (selectedContext.todayEnergyLevel != null) parts.push(`Today's energy level: ${selectedContext.todayEnergyLevel}/10`);
+    if (parts.length > 0) {
+      contextLines.push(`Wellness Summary: ${parts.join(' | ')}`);
+    } else {
+      contextLines.push(`Wellness Summary: Sleep data isn't currently available or logged for this user.`);
+    }
+  }
+
+  // Detailed Health Records (if requested)
+  if (Array.isArray(selectedContext.detailedHealthRecords) && selectedContext.detailedHealthRecords.length > 0) {
+    const recs = selectedContext.detailedHealthRecords.map((r) =>
+      `${r.metricType} from ${r.source}: ${r.valueNumeric || 'N/A'} ${r.unit || ''} (${r.startTime} to ${r.endTime})`
+    );
+    contextLines.push(`Detailed Health Records:\n  ${recs.join('\n  ')}`);
+  }
+
+  // Roadmap Context
+  if (selectedContext.roadmap) {
+    const rm = selectedContext.roadmap;
+    contextLines.push(
+      `Active Roadmap (ID ${rm.id}): "${rm.title}" | Goal: "${rm.outcome}" | ${rm.durationDays} days (${rm.startDate} to ${rm.endDate})`
+    );
+    contextLines.push(
+      `Active Roadmap Progress: Adherence rate ${rm.adherenceRatePercent || 0}% (${rm.completedCount} completed, ${rm.pendingCount} pending, ${rm.skippedCount} skipped, ${rm.rescheduledCount} rescheduled out of ${rm.totalMissions} total missions). Status: ${rm.isKeepingUp ? 'On track (0 skipped)' : 'Behind schedule (' + rm.skippedCount + ' skipped)'}`
+    );
+    if (rm.todayMission) {
+      contextLines.push(
+        `Today's Roadmap Mission (Day ${rm.todayMission.dayNumber}, Day ID ${rm.todayMission.id}): "${rm.todayMission.title}" - Mission: "${rm.todayMission.mission}" [Status: ${rm.todayMission.status}]`
+      );
+    } else {
+      contextLines.push(`Today's Roadmap Mission: None scheduled for current date (${rm.currentDate}).`);
+    }
+    if (Array.isArray(rm.occupiedDates) && rm.occupiedDates.length > 0) {
+      contextLines.push(`Occupied dates in Roadmap: ${rm.occupiedDates.join(', ')}`);
+    }
+    if (Array.isArray(rm.earliestAvailableDates) && rm.earliestAvailableDates.length > 0) {
+      contextLines.push(`Earliest available (unoccupied) dates: ${rm.earliestAvailableDates.join(', ')}`);
+    }
+    if (Array.isArray(rm.days) && rm.days.length > 0) {
+      const daysSummary = rm.days.map((d) => {
+        let desc = `Day ${d.dayNumber} (ID ${d.id}, Date: ${d.date}, Status: ${d.status}): "${d.title}" - "${d.mission}"`;
+        if (d.originalDate && d.originalDate !== d.date) {
+          desc += ` [Rescheduled from ${d.originalDate}]`;
+        }
+        return desc;
+      });
+      contextLines.push(`Roadmap Days List:\n  ${daysSummary.join('\n  ')}`);
+    }
+  } else {
+    contextLines.push(`Active Roadmap: None.`);
+  }
+
+  return contextLines.length > 0
+    ? `[User context]\n${contextLines.join('\n')}\n\n[User message]\n`
+    : '[No user context available for this request]\n\n[User message]\n';
+};
+
 
 // ─── Lazy initialization ──────────────────────────────────────────────────────
 let _client = null;
@@ -361,6 +564,7 @@ const generateContentWithFallback = async (client, { contents, config }) => {
       config,
     });
   } catch (primaryErr) {
+    console.warn('[AI] Gemini primary error:', primaryErr?.message || primaryErr);
     if (!isTransientError(primaryErr)) {
       throw normalizeGeminiError(primaryErr);
     }
@@ -369,12 +573,15 @@ const generateContentWithFallback = async (client, { contents, config }) => {
     console.log('[AI] Using fallback model: %s', GEMINI_FALLBACK_MODEL);
 
     try {
+      const fallbackConfig = { ...config };
+      delete fallbackConfig.thinkingConfig;
       return await client.models.generateContent({
         model: GEMINI_FALLBACK_MODEL,
         contents,
-        config,
+        config: fallbackConfig,
       });
     } catch (geminiFallbackErr) {
+      console.warn('[AI] Gemini fallback error:', geminiFallbackErr?.message || geminiFallbackErr);
       if (!isTransientError(geminiFallbackErr)) {
         throw normalizeGeminiError(geminiFallbackErr);
       }
@@ -402,151 +609,7 @@ const generateContentWithFallback = async (client, { contents, config }) => {
   }
 };
 
-/**
- * Builds a structured context preamble from selectedContext.
- *
- * @param {Object} selectedContext
- * @returns {string}
- */
-const buildContextPreamble = (selectedContext = {}) => {
-  const contextLines = [];
 
-  const name = selectedContext.user?.name || selectedContext.userName;
-  if (name) {
-    contextLines.push(`User name: ${name}`);
-  }
-
-  const currentDate = selectedContext.currentDate || selectedContext.temporalContext?.currentDate;
-  if (currentDate) {
-    contextLines.push(`Current date: ${currentDate}`);
-  }
-
-  // Health Context
-  if (selectedContext.health) {
-    const h = selectedContext.health;
-    const parts = [];
-    if (h.todaySteps != null) parts.push(`Today's steps: ${h.todaySteps}`);
-    if (h.todayActiveExerciseMinutes != null) parts.push(`Today's active exercise: ${h.todayActiveExerciseMinutes} mins`);
-    if (h.todayExerciseDistanceMeters != null) parts.push(`Today's exercise distance: ${h.todayExerciseDistanceMeters} meters`);
-    if (h.totalSteps7d != null && Number(h.totalSteps7d) > 0) {
-      parts.push(`7-day steps total: ${h.totalSteps7d} (avg ${h.avgSteps7d}/day)`);
-    }
-    if (h.bestStepDay) {
-      parts.push(`Best step day: ${h.bestStepDay.date} (${h.bestStepDay.steps} steps)`);
-    }
-    if (h.totalExerciseMinutes7d != null && Number(h.totalExerciseMinutes7d) > 0) {
-      parts.push(`7-day active exercise total: ${h.totalExerciseMinutes7d} mins (avg ${h.avgExerciseMinutes7d || 0} mins/day)`);
-    }
-    if (h.totalExerciseDistanceMeters7d != null && Number(h.totalExerciseDistanceMeters7d) > 0) {
-      parts.push(`7-day total distance: ${h.totalExerciseDistanceMeters7d} meters`);
-    }
-    if (parts.length > 0) {
-      contextLines.push(`Health Summary: ${parts.join(' | ')}`);
-    }
-    contextLines.push(`Untracked Health Data Note: Heart rate, calories burned, weight, and sleep stages are NOT currently tracked/available in NOVA.`);
-  } else {
-    contextLines.push(`Health Summary: No health sync data available for the user.`);
-    contextLines.push(`Untracked Health Data Note: Heart rate, calories burned, weight, and steps/exercise are NOT currently tracked/available for this user in NOVA.`);
-  }
-
-  // Focus Context
-  if (selectedContext.focus) {
-    const f = selectedContext.focus;
-    const parts = [];
-    if (f.todayMinutes != null || f.todaySessions != null) {
-      parts.push(`Today: ${f.todayMinutes || 0} focus mins across ${f.todaySessions || 0} sessions (${f.todayCompleted || 0} completed)`);
-    }
-    if (f.totalSessionsLast7Days > 0) {
-      let f7 = `Last 7 days: ${f.totalSessionsLast7Days} total sessions (${f.completedLast7Days} completed`;
-      if (f.completionRatePercent != null) f7 += `, ${f.completionRatePercent}% completion rate`;
-      f7 += `), ${f.totalMinutesLast7Days} total focus mins`;
-      if (f.avgInterruptionsLast7Days != null) f7 += `, avg ${f.avgInterruptionsLast7Days} interruptions/session`;
-      parts.push(f7);
-    }
-    if (f.peakProductiveHourKolkata != null) {
-      const h12 = f.peakProductiveHourKolkata % 12 || 12;
-      const ampm = f.peakProductiveHourKolkata >= 12 ? 'PM' : 'AM';
-      parts.push(`Most productive time of day: around ${h12}:00 ${ampm} (Hour ${f.peakProductiveHourKolkata})`);
-    }
-    if (f.mostRecentSession) {
-      const m = f.mostRecentSession;
-      parts.push(`Most recent session: ${m.durationMinutes} mins (${m.completed ? 'completed' : 'incomplete'}), started at ${m.startedAt}, ${m.interruptions} interruptions`);
-    }
-    if (parts.length > 0) contextLines.push(`Focus Summary: ${parts.join(' | ')}`);
-  } else if (selectedContext.recentFocus) {
-    const rf = selectedContext.recentFocus;
-    contextLines.push(
-      `Recent focus (last 7 days): ${rf.totalSessionsLast7Days} sessions, ${rf.completedLast7Days} completed, ${rf.totalMinutesLast7Days} total minutes`
-    );
-  } else {
-    contextLines.push(`Focus Summary: No focus sessions recorded yet.`);
-  }
-
-  // Wellness Context
-  if (selectedContext.wellness) {
-    const w = selectedContext.wellness;
-    const parts = [];
-    if (w.todaySleepHours != null) parts.push(`Today's sleep: ${w.todaySleepHours} hours`);
-    if (w.todayEnergyLevel != null) parts.push(`Today's energy level: ${w.todayEnergyLevel}/10`);
-    if (w.avgSleepHours7d != null) parts.push(`7-day avg sleep: ${w.avgSleepHours7d} hours`);
-    if (w.avgEnergyLevel7d != null) parts.push(`7-day avg energy level: ${w.avgEnergyLevel7d}/10`);
-    if (parts.length > 0) contextLines.push(`Wellness Summary: ${parts.join(' | ')}`);
-  } else {
-    const parts = [];
-    if (selectedContext.todaySleepHours != null) parts.push(`Today's sleep: ${selectedContext.todaySleepHours} hours`);
-    if (selectedContext.todayEnergyLevel != null) parts.push(`Today's energy level: ${selectedContext.todayEnergyLevel}/10`);
-    if (parts.length > 0) {
-      contextLines.push(`Wellness Summary: ${parts.join(' | ')}`);
-    } else {
-      contextLines.push(`Wellness Summary: Sleep data isn't currently available or logged for this user.`);
-    }
-  }
-
-  // Detailed Health Records (if requested)
-  if (Array.isArray(selectedContext.detailedHealthRecords) && selectedContext.detailedHealthRecords.length > 0) {
-    const recs = selectedContext.detailedHealthRecords.map((r) =>
-      `${r.metricType} from ${r.source}: ${r.valueNumeric || 'N/A'} ${r.unit || ''} (${r.startTime} to ${r.endTime})`
-    );
-    contextLines.push(`Detailed Health Records:\n  ${recs.join('\n  ')}`);
-  }
-
-  // Roadmap Context
-  if (selectedContext.roadmap) {
-    const rm = selectedContext.roadmap;
-    contextLines.push(
-      `Active Roadmap (ID ${rm.id}): "${rm.title}" | Goal: "${rm.outcome}" | ${rm.durationDays} days (${rm.startDate} to ${rm.endDate})`
-    );
-    if (rm.todayMission) {
-      contextLines.push(
-        `Today's Roadmap Mission (Day ${rm.todayMission.dayNumber}, Day ID ${rm.todayMission.id}): "${rm.todayMission.title}" - Mission: "${rm.todayMission.mission}" [Status: ${rm.todayMission.status}]`
-      );
-    } else {
-      contextLines.push(`Today's Roadmap Mission: None scheduled for current date (${rm.currentDate}).`);
-    }
-    if (Array.isArray(rm.occupiedDates) && rm.occupiedDates.length > 0) {
-      contextLines.push(`Occupied dates in Roadmap: ${rm.occupiedDates.join(', ')}`);
-    }
-    if (Array.isArray(rm.earliestAvailableDates) && rm.earliestAvailableDates.length > 0) {
-      contextLines.push(`Earliest available (unoccupied) dates: ${rm.earliestAvailableDates.join(', ')}`);
-    }
-    if (Array.isArray(rm.days) && rm.days.length > 0) {
-      const daysSummary = rm.days.map((d) => {
-        let desc = `Day ${d.dayNumber} (ID ${d.id}, Date: ${d.date}, Status: ${d.status}): "${d.title}" - "${d.mission}"`;
-        if (d.originalDate && d.originalDate !== d.date) {
-          desc += ` [Rescheduled from ${d.originalDate}]`;
-        }
-        return desc;
-      });
-      contextLines.push(`Roadmap Days List:\n  ${daysSummary.join('\n  ')}`);
-    }
-  } else {
-    contextLines.push(`Active Roadmap: None.`);
-  }
-
-  return contextLines.length > 0
-    ? `[User context]\n${contextLines.join('\n')}\n\n[User message]\n`
-    : '[No user context available for this request]\n\n[User message]\n';
-};
 
 
 // ─── Public API ───────────────────────────────────────────────────────────────

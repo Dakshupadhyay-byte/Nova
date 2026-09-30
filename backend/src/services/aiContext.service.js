@@ -9,6 +9,10 @@
 //   • Wellness Summary & History: getWellnessSummary(userId, days), getWellnessHistory(userId, days)
 //   • Roadmap Active & History: getActiveRoadmap(userId), getRoadmapHistory(userId)
 //
+// Period-over-Period Comparisons:
+//   • Calculates current 7 days vs previous 7 days (days 0..7 vs 8..14) for steps, exercise, focus minutes, completion rates, energy, and sleep.
+//   • Flags `hasHistoricalBaseline: false` when insufficient prior historical rows exist.
+//
 // Security Rules:
 //   • Every function receives explicit, authenticated `userId` and uses parameterized queries.
 //   • No arbitrary `userId` selection allowed by model or client.
@@ -42,14 +46,14 @@ const getUserProfile = async (userId) => {
 };
 
 /**
- * Retrieves daily aggregated health metrics summary (steps, exercise, distance, best step day).
+ * Retrieves daily aggregated health metrics summary + previous 7-day comparison baseline.
  *
  * @param {number} userId
  * @param {number} days
  * @returns {Promise<Object>}
  */
 const getHealthSummary = async (userId, days = DEFAULT_DAYS) => {
-  const [todayRes, summaryRes, bestStepRes] = await Promise.all([
+  const [todayRes, summaryRes, prevSummaryRes, bestStepRes] = await Promise.all([
     db.query(
       `SELECT total_steps, active_exercise_minutes, exercise_distance_meters
        FROM health_daily_aggregates
@@ -69,6 +73,19 @@ const getHealthSummary = async (userId, days = DEFAULT_DAYS) => {
       [userId, days]
     ),
     db.query(
+      `SELECT COALESCE(SUM(total_steps), 0)::BIGINT                      AS total_steps_prev,
+              COALESCE(AVG(total_steps), 0)::NUMERIC(10,0)               AS avg_steps_prev,
+              COALESCE(SUM(active_exercise_minutes), 0)::NUMERIC(10,1)  AS total_exercise_minutes_prev,
+              COALESCE(AVG(active_exercise_minutes), 0)::NUMERIC(10,1)  AS avg_exercise_minutes_prev,
+              COALESCE(SUM(exercise_distance_meters), 0)::NUMERIC(12,1) AS total_exercise_distance_prev,
+              COUNT(*)::INTEGER                                         AS tracked_days_prev
+       FROM health_daily_aggregates
+       WHERE user_id = $1
+         AND log_date >= CURRENT_DATE - (($2 * 2) || ' days')::INTERVAL
+         AND log_date < CURRENT_DATE - ($2 || ' days')::INTERVAL`,
+      [userId, days]
+    ),
+    db.query(
       `SELECT log_date::TEXT AS log_date, total_steps
        FROM health_daily_aggregates
        WHERE user_id = $1 AND log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL
@@ -80,6 +97,7 @@ const getHealthSummary = async (userId, days = DEFAULT_DAYS) => {
 
   const today = todayRes.rows[0];
   const summary = summaryRes.rows[0];
+  const prevSummary = prevSummaryRes.rows[0];
   const bestStepRow = bestStepRes.rows[0];
 
   const obj = {};
@@ -115,6 +133,26 @@ const getHealthSummary = async (userId, days = DEFAULT_DAYS) => {
     };
   }
 
+  const prevTrackedDays = Number(prevSummary?.tracked_days_prev) || 0;
+  if (prevTrackedDays > 0) {
+    const totalStepsPrev = Number(prevSummary.total_steps_prev) || 0;
+    const totalExPrev = Number(prevSummary.total_exercise_minutes_prev) || 0;
+    obj.comparison = {
+      hasHistoricalBaseline: true,
+      totalStepsPrev7d: totalStepsPrev,
+      avgStepsPrev7d: Number(prevSummary.avg_steps_prev) || 0,
+      stepsDelta: (obj.totalSteps7d || 0) - totalStepsPrev,
+      totalExerciseMinutesPrev7d: totalExPrev,
+      avgExerciseMinutesPrev7d: Number(prevSummary.avg_exercise_minutes_prev) || 0,
+      exerciseMinutesDelta: (obj.totalExerciseMinutes7d || 0) - totalExPrev,
+    };
+  } else {
+    obj.comparison = {
+      hasHistoricalBaseline: false,
+      reason: 'Insufficient historical data in previous period',
+    };
+  }
+
   return obj;
 };
 
@@ -142,8 +180,7 @@ const getHealthHistory = async (userId, days = DEFAULT_DAYS) => {
 };
 
 /**
- * Retrieves detailed health records (e.g. granular exercise sessions or specific metrics)
- * strictly scoped to `userId` and limited to avoid unnecessary payload dumps.
+ * Retrieves detailed health records strictly scoped to `userId`.
  *
  * @param {number} userId
  * @param {string|null} metricType
@@ -176,14 +213,14 @@ const getDetailedHealthRecords = async (userId, metricType = null, limit = 10) =
 };
 
 /**
- * Retrieves focus sessions summary (today's counts/minutes, 7-day stats, peak focus time, recent session).
+ * Retrieves focus sessions summary + previous 7-day comparison baseline.
  *
  * @param {number} userId
  * @param {number} days
  * @returns {Promise<Object>}
  */
 const getFocusSummary = async (userId, days = DEFAULT_DAYS) => {
-  const [todayRes, summaryRes, recentRes, peakHourRes] = await Promise.all([
+  const [todayRes, summaryRes, prevSummaryRes, recentRes, peakHourRes] = await Promise.all([
     db.query(
       `SELECT COUNT(*)::INTEGER                                  AS today_sessions,
               COUNT(*) FILTER (WHERE completed = TRUE)::INTEGER  AS today_completed,
@@ -199,6 +236,17 @@ const getFocusSummary = async (userId, days = DEFAULT_DAYS) => {
               COALESCE(AVG(interruptions), 0)::NUMERIC(4,1)     AS avg_interruptions
        FROM focus_sessions
        WHERE user_id = $1 AND started_at >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
+      [userId, days]
+    ),
+    db.query(
+      `SELECT COUNT(*)::INTEGER                                  AS total_sessions_prev,
+              COUNT(*) FILTER (WHERE completed = TRUE)::INTEGER  AS completed_sessions_prev,
+              COALESCE(SUM(duration_minutes), 0)::INTEGER        AS total_minutes_prev,
+              COALESCE(AVG(interruptions), 0)::NUMERIC(4,1)     AS avg_interruptions_prev
+       FROM focus_sessions
+       WHERE user_id = $1
+         AND started_at >= CURRENT_DATE - (($2 * 2) || ' days')::INTERVAL
+         AND started_at < CURRENT_DATE - ($2 || ' days')::INTERVAL`,
       [userId, days]
     ),
     db.query(
@@ -223,6 +271,7 @@ const getFocusSummary = async (userId, days = DEFAULT_DAYS) => {
 
   const today = todayRes.rows[0];
   const summary = summaryRes.rows[0];
+  const prevSummary = prevSummaryRes.rows[0];
   const recent = recentRes.rows[0];
   const peakHourRow = peakHourRes.rows[0];
 
@@ -257,6 +306,27 @@ const getFocusSummary = async (userId, days = DEFAULT_DAYS) => {
     };
   }
 
+  const prevTotalSessions = Number(prevSummary?.total_sessions_prev) || 0;
+  if (prevTotalSessions > 0) {
+    const prevCompleted = Number(prevSummary.completed_sessions_prev) || 0;
+    const prevRate = Number(((prevCompleted / prevTotalSessions) * 100).toFixed(1));
+    obj.comparison = {
+      hasHistoricalBaseline: true,
+      totalSessionsPrev7d: prevTotalSessions,
+      completedLast7DaysPrev7d: prevCompleted,
+      completionRatePercentPrev7d: prevRate,
+      totalMinutesPrev7d: Number(prevSummary.total_minutes_prev) || 0,
+      sessionsCompletedDelta: (obj.completedLast7Days || 0) - prevCompleted,
+      completionRateDeltaPercent: (obj.completionRatePercent || 0) - prevRate,
+      focusMinutesDelta: (obj.totalMinutesLast7Days || 0) - (Number(prevSummary.total_minutes_prev) || 0),
+    };
+  } else {
+    obj.comparison = {
+      hasHistoricalBaseline: false,
+      reason: 'Insufficient focus session data in previous period',
+    };
+  }
+
   return obj;
 };
 
@@ -284,14 +354,14 @@ const getFocusHistory = async (userId, days = DEFAULT_DAYS) => {
 };
 
 /**
- * Retrieves wellness summary (today & 7-day sleep/energy averages).
+ * Retrieves wellness summary + previous 7-day comparison baseline.
  *
  * @param {number} userId
  * @param {number} days
  * @returns {Promise<Object>}
  */
 const getWellnessSummary = async (userId, days = DEFAULT_DAYS) => {
-  const [todayRes, summaryRes] = await Promise.all([
+  const [todayRes, summaryRes, prevSummaryRes] = await Promise.all([
     db.query(
       `SELECT sleep_hours, energy_level
        FROM wellness_logs
@@ -307,10 +377,21 @@ const getWellnessSummary = async (userId, days = DEFAULT_DAYS) => {
        WHERE user_id = $1 AND log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
       [userId, days]
     ),
+    db.query(
+      `SELECT AVG(sleep_hours)::NUMERIC(4,1)  AS avg_sleep_prev,
+              AVG(energy_level)::NUMERIC(4,1) AS avg_energy_prev,
+              COUNT(*)::INTEGER              AS log_count_prev
+       FROM wellness_logs
+       WHERE user_id = $1
+         AND log_date >= CURRENT_DATE - (($2 * 2) || ' days')::INTERVAL
+         AND log_date < CURRENT_DATE - ($2 || ' days')::INTERVAL`,
+      [userId, days]
+    ),
   ]);
 
   const today = todayRes.rows[0];
   const summary = summaryRes.rows[0];
+  const prevSummary = prevSummaryRes.rows[0];
 
   const obj = {};
 
@@ -323,6 +404,24 @@ const getWellnessSummary = async (userId, days = DEFAULT_DAYS) => {
     if (summary.avg_sleep != null) obj.avgSleepHours7d = Number(summary.avg_sleep);
     if (summary.avg_energy != null) obj.avgEnergyLevel7d = Number(summary.avg_energy);
     obj.logCount7d = Number(summary.log_count) || 0;
+  }
+
+  const prevLogCount = Number(prevSummary?.log_count_prev) || 0;
+  if (prevLogCount > 0) {
+    const prevSleep = prevSummary.avg_sleep_prev != null ? Number(prevSummary.avg_sleep_prev) : null;
+    const prevEnergy = prevSummary.avg_energy_prev != null ? Number(prevSummary.avg_energy_prev) : null;
+    obj.comparison = {
+      hasHistoricalBaseline: true,
+      avgSleepHoursPrev7d: prevSleep,
+      avgEnergyLevelPrev7d: prevEnergy,
+      energyDelta: (obj.avgEnergyLevel7d != null && prevEnergy != null) ? Number((obj.avgEnergyLevel7d - prevEnergy).toFixed(1)) : null,
+      sleepDelta: (obj.avgSleepHours7d != null && prevSleep != null) ? Number((obj.avgSleepHours7d - prevSleep).toFixed(1)) : null,
+    };
+  } else {
+    obj.comparison = {
+      hasHistoricalBaseline: false,
+      reason: 'Insufficient wellness logs in previous period',
+    };
   }
 
   return obj;
@@ -417,6 +516,10 @@ const getActiveRoadmap = async (userId) => {
     }
   }
 
+  const completedCount = completedDays.length;
+  const totalMissions = days.length;
+  const adherenceRatePercent = totalMissions > 0 ? Number(((completedCount / totalMissions) * 100).toFixed(1)) : 0;
+
   return {
     id: Number(activeBpRow.id),
     title: activeBpRow.title,
@@ -436,11 +539,13 @@ const getActiveRoadmap = async (userId) => {
           date: todayMission.date,
         }
       : null,
-    totalMissions: days.length,
+    totalMissions,
     pendingCount: pendingDays.length,
-    completedCount: completedDays.length,
+    completedCount,
     skippedCount: skippedDays.length,
     rescheduledCount: rescheduledDays.length,
+    adherenceRatePercent,
+    isKeepingUp: skippedDays.length === 0,
     occupiedDates,
     earliestAvailableDates,
     days,
@@ -490,9 +595,9 @@ const detectIntent = (userMessage = '') => {
   const isRoadmapAction = /\b(move|reschedule|shift|push|delay|start.*from|start.*tomorrow|start.*friday)\b/i.test(msg) &&
                           /\b(mission|day|roadmap|schedule)\b/i.test(msg);
 
-  const isRecommend = /\b(recommend|suggestion|suggest|routine|workout|yoga|mobility|exercise to do|how (can|to) improve my focus)\b/i.test(msg);
+  const isRecommend = /\b(recommend|suggestion|suggest|routine|workout|yoga|mobility|exercise to do|how (can|to) improve|what should i (do|focus|improve)|one concrete|action|next step)\b/i.test(msg);
 
-  const isAnalyze = /\b(why|relationship|correlation|trend|productive|overall|progress|compare|affect|impact|lower|higher)\b/i.test(msg);
+  const isAnalyze = /\b(why|relationship|correlation|trend|productive|overall|progress|compare|affect|impact|lower|higher|insight|insights|change|changed|improving|patterns|strongest|weakest|keeping up|falling behind|going well)\b/i.test(msg);
 
   const isRead = /\b(how many|what is|what was|show me|my data|status|mission|history|summary|list|view|delete)\b/i.test(msg);
 
@@ -505,12 +610,12 @@ const detectIntent = (userMessage = '') => {
   const domains = new Set();
 
   if (/\b(step|exercise|workout|distance|walk|run|activity|health)\b/i.test(msg)) domains.add('health');
-  if (/\b(focus|session|deep work|pomodoro|interrupt|completion|rate|productive)\b/i.test(msg)) domains.add('focus');
+  if (/\b(focus|session|deep work|pomodoro|interrupt|completion|rate|productive|productivity)\b/i.test(msg)) domains.add('focus');
   if (/\b(wellness|sleep|energy|feeling|check-in|mood)\b/i.test(msg)) domains.add('wellness');
   if (/\b(roadmap|mission|blueprint|day|schedule)\b/i.test(msg)) domains.add('roadmap');
 
-  // Multi-domain or implicit questions default to all relevant domains
-  if (isAnalyze || isRecommend || domains.size === 0 || /\b(overall|week|everything|all|doing)\b/i.test(msg)) {
+  // Insights, recommendations, and overall performance default to all domains
+  if (isAnalyze || isRecommend || domains.size === 0 || /\b(overall|week|everything|all|doing|today|right now|insights|progress)\b/i.test(msg)) {
     domains.add('health');
     domains.add('focus');
     domains.add('wellness');
@@ -579,7 +684,7 @@ const buildDbContext = async (userId, userMessage = '') => {
     }));
   }
 
-  // If detailed health records requested (e.g. exercise details)
+  // If detailed health records requested
   if (/\b(exercise session|workout detail|health record)\b/i.test(userMessage)) {
     domainPromises.push(getDetailedHealthRecords(userId, 'exercise', 5).then((records) => {
       context.detailedHealthRecords = records;
@@ -592,7 +697,7 @@ const buildDbContext = async (userId, userMessage = '') => {
 };
 
 /**
- * Merges health JSON (placeholder hook for direct payload integration if needed).
+ * Merges health JSON.
  */
 const mergeHealthContext = (dbContext, healthJson = null) => {
   if (!healthJson) return dbContext;
@@ -607,7 +712,6 @@ const selectRelevantContext = (fullContext, userMessage) => {
 };
 
 module.exports = {
-  // AI Data Access Functions (Step 2)
   getUserProfile,
   getHealthSummary,
   getHealthHistory,
@@ -618,8 +722,6 @@ module.exports = {
   getWellnessHistory,
   getActiveRoadmap,
   getRoadmapHistory,
-
-  // Intent & Context Builder (Step 3 & Step 4)
   detectIntent,
   buildDbContext,
   mergeHealthContext,

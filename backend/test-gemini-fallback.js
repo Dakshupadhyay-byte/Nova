@@ -457,7 +457,7 @@ async function runGeminiFallbackTests() {
   totalTests++;
   try {
     assert.strictEqual(geminiService.GEMINI_PRIMARY_MODEL, 'gemini-3.1-flash-lite');
-    assert.strictEqual(geminiService.GEMINI_FALLBACK_MODEL, 'gemini-2.5-flash');
+    assert.strictEqual(geminiService.GEMINI_FALLBACK_MODEL, process.env.GEMINI_FALLBACK_MODEL || 'gemini-flash-latest');
     assert.strictEqual(geminiService.OLLAMA_BASE_URL, process.env.OLLAMA_BASE_URL || 'http://10.77.76.101:11434');
     assert.strictEqual(geminiService.OLLAMA_MODEL, process.env.OLLAMA_MODEL || 'llama3.2:latest');
 
