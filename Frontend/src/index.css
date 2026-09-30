@@ -237,7 +237,7 @@
 /* ─── Input Utilities ────────────────────────────────────────────────────── */
 .nova-input {
   width: 100%;
-  padding: 0.625rem 1rem;
+  padding: 0.625rem 3rem 0.625rem 3rem;
   font-size: 0.875rem;
   color: #131b2e;
   background-color: rgba(240, 243, 253, 0.75);

@@ -176,7 +176,7 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label="Search NOVA features"
             aria-haspopup="listbox"
             aria-expanded={isFocused}
-            className="w-full pl-10 pr-12 py-2 text-[13.5px] nova-input"
+            className="w-full pl-12 pr-12 py-2 text-[13.5px] nova-input"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
             {searchVal ? (
