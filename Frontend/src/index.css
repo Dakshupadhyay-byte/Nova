@@ -1,12 +1,17 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --color-brand-primary: #00685f;
+  --color-brand-primary-hover: #00524b;
+  --color-teal-light: #e2f5f1;
+  --color-teal-border: #99dfd5;
+  --color-accent-purple: #712ae2;
+}
+
 @layer base {
   :root {
-    --font-manrope: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-hanken: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
-
-    /* Design Tokens */
     --color-bg-app: #faf8ff;
     --color-surface: rgba(255, 255, 255, 0.82);
     --color-surface-elevated: rgba(255, 255, 255, 0.94);
@@ -14,17 +19,9 @@
     --color-border-subtle: rgba(218, 226, 253, 0.85);
     --color-border-active: rgba(0, 104, 95, 0.4);
 
-    --color-brand-primary: #00685f;
-    --color-brand-primary-hover: #00524b;
-    --color-teal-light: #e2f5f1;
-    --color-teal-border: #99dfd5;
-
     --color-text-primary: #131b2e;
     --color-text-secondary: #3d4947;
     --color-text-muted: #6d7a77;
-
-    --color-accent-purple: #712ae2;
-    --color-accent-purple-light: #f4f0ff;
 
     --radius-sm: 8px;
     --radius-md: 12px;
@@ -45,7 +42,7 @@
   }
 
   body {
-    font-family: var(--font-manrope);
+    font-family: var(--font-sans);
     background-color: var(--color-bg-app);
     color: var(--color-text-primary);
     -webkit-font-smoothing: antialiased;
@@ -55,67 +52,46 @@
 }
 
 /* ─── Global Glass System ─────────────────────────────────────────────────── */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.82) !important;
+.glass-panel,
+.nova-card {
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(218, 226, 253, 0.85) !important;
-  box-shadow: 0 8px 32px -4px rgba(0, 104, 95, 0.05), 0 2px 8px -1px rgba(19, 27, 46, 0.03), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(218, 226, 253, 0.85);
+  box-shadow: 0 8px 32px -4px rgba(0, 104, 95, 0.05), 0 2px 8px -1px rgba(19, 27, 46, 0.03), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
 }
 
-.glass-panel-interactive {
-  background: rgba(255, 255, 255, 0.82) !important;
+.glass-panel-interactive,
+.nova-card-interactive {
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(218, 226, 253, 0.85) !important;
-  box-shadow: 0 8px 32px -4px rgba(0, 104, 95, 0.05), 0 2px 8px -1px rgba(19, 27, 46, 0.03), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  border: 1px solid rgba(218, 226, 253, 0.85);
+  box-shadow: 0 8px 32px -4px rgba(0, 104, 95, 0.05), 0 2px 8px -1px rgba(19, 27, 46, 0.03), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-panel-interactive:hover {
-  transform: translateY(-3px) !important;
-  background: rgba(255, 255, 255, 0.92) !important;
-  border-color: rgba(0, 104, 95, 0.35) !important;
-  box-shadow: 0 16px 40px -6px rgba(0, 104, 95, 0.12), 0 6px 16px -2px rgba(19, 27, 46, 0.06), inset 0 1px 0 0 #ffffff !important;
+.glass-panel-interactive:hover,
+.nova-card-interactive:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 104, 95, 0.35);
+  box-shadow: 0 16px 40px -6px rgba(0, 104, 95, 0.12), 0 6px 16px -2px rgba(19, 27, 46, 0.06), inset 0 1px 0 0 #ffffff;
 }
 
 .glass-subtle {
-  background: rgba(240, 243, 253, 0.65) !important;
+  background: rgba(240, 243, 253, 0.65);
   backdrop-filter: blur(12px) saturate(160%);
   -webkit-backdrop-filter: blur(12px) saturate(160%);
-  border: 1px solid rgba(218, 226, 253, 0.6) !important;
+  border: 1px solid rgba(218, 226, 253, 0.6);
 }
 
 .glass-strong {
-  background: rgba(255, 255, 255, 0.88) !important;
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(20px) saturate(190%);
   -webkit-backdrop-filter: blur(20px) saturate(190%);
-  border: 1px solid rgba(218, 226, 253, 0.9) !important;
-  box-shadow: 0 12px 40px -6px rgba(0, 104, 95, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
-}
-
-/* Automatic Glass Enhancer for Standard Screen Cards */
-.bg-white {
-  background-color: rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(16px) saturate(170%);
-  -webkit-backdrop-filter: blur(16px) saturate(170%);
-  box-shadow: 0 4px 24px -2px rgba(0, 104, 95, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.bg-white:hover {
-  border-color: rgba(0, 104, 95, 0.28);
-}
-
-/* Modals & Dropdown Popovers keep crisp solid white backgrounds */
-.z-50 .bg-white,
-.z-\[50\] .bg-white,
-.z-\[40\] .bg-white,
-[role="listbox"],
-[role="option"] {
-  background-color: #ffffff !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  border: 1px solid rgba(218, 226, 253, 0.9);
+  box-shadow: 0 12px 40px -6px rgba(0, 104, 95, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
 }
 
 /* Opaque Fallback for Browsers without Backdrop Filter */
@@ -123,11 +99,11 @@
   .glass-panel,
   .glass-panel-interactive,
   .glass-strong,
-  .bg-white {
-    background-color: rgba(255, 255, 255, 0.98) !important;
+  .nova-card {
+    background-color: rgba(255, 255, 255, 0.98);
   }
   .glass-subtle {
-    background-color: #f0f3fd !important;
+    background-color: #f0f3fd;
   }
 }
 
@@ -188,16 +164,15 @@
   font-size: 0.875rem;
   font-weight: 600;
   border-radius: var(--radius-md);
-  background-color: #00685f !important;
-  color: #ffffff !important;
+  background-color: #00685f;
+  color: #ffffff;
   box-shadow: 0 3px 12px rgba(0, 104, 95, 0.25);
   transition: all 0.18s var(--ease-out-smooth);
   cursor: pointer;
   border: 1px solid transparent;
-  backdrop-filter: none !important;
 }
 .nova-btn-primary:hover:not(:disabled) {
-  background-color: #00524b !important;
+  background-color: #00524b;
   box-shadow: 0 6px 18px rgba(0, 104, 95, 0.35);
   transform: translateY(-1.5px);
 }
@@ -225,15 +200,14 @@
   font-size: 0.875rem;
   font-weight: 600;
   border-radius: var(--radius-md);
-  background-color: #e2f5f1 !important;
-  color: #00685f !important;
+  background-color: #e2f5f1;
+  color: #00685f;
   border: 1px solid rgba(153, 223, 213, 0.8);
   transition: all 0.18s var(--ease-out-smooth);
   cursor: pointer;
-  backdrop-filter: none !important;
 }
 .nova-btn-secondary:hover:not(:disabled) {
-  background-color: #d2f0ea !important;
+  background-color: #d2f0ea;
   border-color: #00685f;
   transform: translateY(-1px);
 }
@@ -250,14 +224,14 @@
   font-size: 0.875rem;
   font-weight: 500;
   border-radius: var(--radius-md);
-  background-color: transparent !important;
-  color: #3d4947 !important;
+  background-color: transparent;
+  color: #3d4947;
   transition: all 0.15s ease;
   cursor: pointer;
 }
 .nova-btn-ghost:hover:not(:disabled) {
-  background-color: rgba(240, 243, 253, 0.8) !important;
-  color: #131b2e !important;
+  background-color: rgba(240, 243, 253, 0.8);
+  color: #131b2e;
 }
 
 /* ─── Input Utilities ────────────────────────────────────────────────────── */
@@ -266,18 +240,17 @@
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
   color: #131b2e;
-  background-color: rgba(240, 243, 253, 0.75) !important;
+  background-color: rgba(240, 243, 253, 0.75);
   border: 1px solid #dae2fd;
   border-radius: var(--radius-md);
   transition: all 0.15s var(--ease-out-smooth);
   outline: none;
-  backdrop-filter: none !important;
 }
 .nova-input:hover {
-  background-color: rgba(235, 240, 253, 0.95) !important;
+  background-color: rgba(235, 240, 253, 0.95);
 }
 .nova-input:focus {
-  background-color: #ffffff !important;
+  background-color: #ffffff;
   border-color: #00685f;
   box-shadow: 0 0 0 3px rgba(0, 104, 95, 0.18);
 }
