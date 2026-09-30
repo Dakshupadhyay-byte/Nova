@@ -4,10 +4,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { onAuthChange, logOut } from './services/auth';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { onAuthChange, logOut, getIdToken } from './services/auth';
+import { getDashboard } from './services/api';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
+import { FloatingNovaAIButton } from './components/FloatingNovaAIButton';
 import { OverviewScreen } from './screens/OverviewScreen';
 import { FocusScreen } from './screens/FocusScreen';
 import { CheckInScreen } from './screens/CheckInScreen';
@@ -15,6 +17,8 @@ import { AnalyticsScreen } from './screens/AnalyticsScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { NovaAIScreen } from './screens/NovaAIScreen';
+import { BlueprintScreen } from './screens/BlueprintScreen';
+import { SimulatorScreen } from './screens/SimulatorScreen';
 import { LoginScreen, AuthenticatedUser } from './screens/LoginScreen';
 import { LandingPage } from './screens/landing/LandingPage';
 import {
@@ -39,7 +43,35 @@ interface AppShellProps {
 
 const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
   const navigate = useNavigate();
-  const [currentTab, setCurrentTab] = useState<NavTab>('overview');
+  const location = useLocation();
+
+  const getTabFromPath = (path: string): NavTab => {
+    if (path.includes('nova-ai') || path === '/ai') return 'nova-ai';
+    if (path.includes('focus')) return 'focus';
+    if (path.includes('checkin')) return 'checkin';
+    if (path.includes('analytics')) return 'analytics';
+    if (path.includes('history')) return 'history';
+    if (path.includes('blueprint')) return 'blueprint';
+    if (path.includes('simulator')) return 'simulator';
+    if (path.includes('settings')) return 'settings';
+    return 'overview';
+  };
+
+  const [currentTab, setCurrentTab] = useState<NavTab>(() => getTabFromPath(window.location.pathname));
+
+  useEffect(() => {
+    const tab = getTabFromPath(location.pathname);
+    setCurrentTab(tab);
+  }, [location.pathname]);
+
+  const handleSelectTab = (tab: NavTab) => {
+    setCurrentTab(tab);
+    const targetPath = tab === 'overview' ? '/dashboard' : `/${tab}`;
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  };
+
   const [currentUser, setCurrentUser] = useState(() => getActiveUser());
   const [metrics, setMetrics] = useState<MetricOverview>(INITIAL_METRICS);
   const [focusBlocks, setFocusBlocks] = useState<FocusBlock[]>(INITIAL_FOCUS_BLOCKS);
@@ -50,6 +82,32 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
     const handleUserUpdate = () => setCurrentUser(getActiveUser());
     window.addEventListener('nova_user_change', handleUserUpdate);
     return () => window.removeEventListener('nova_user_change', handleUserUpdate);
+  }, []);
+
+  // Fetch real user dashboard metrics from GET /api/dashboard
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDashboardMetrics = async () => {
+      try {
+        const token = await getIdToken();
+        if (!token) return;
+        const dashboard = await getDashboard(token);
+        const sleepHours = dashboard?.today?.sleepHours ?? dashboard?.recentWellness?.[0]?.sleepHours;
+        if (isMounted && sleepHours != null) {
+          setMetrics((prev) => ({
+            ...prev,
+            sleepHours: sleepHours,
+          }));
+        }
+      } catch (err) {
+        console.warn('[DASHBOARD SYNC] Failed to load dashboard metrics:', err);
+      }
+    };
+
+    fetchDashboardMetrics();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // If not authenticated (and done loading), redirect to login
@@ -86,19 +144,34 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf8ff] text-[#131b2e] flex flex-col md:flex-row antialiased">
-      <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} quantumSync={metrics.quantumSyncPercent} />
+    <div className="h-screen bg-[#faf8ff] text-[#131b2e] flex flex-col md:flex-row antialiased overflow-hidden">
+      <Sidebar currentTab={currentTab} onSelectTab={handleSelectTab} quantumSync={metrics.quantumSyncPercent} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header user={currentUser} onSearch={q => setSearchQuery(q)} onOpenSettings={() => setCurrentTab('settings')} onLockTerminal={handleLockTerminal} />
-        <main className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-16">
-          {currentTab === 'overview' && <OverviewScreen metrics={metrics} focusBlocks={focusBlocks} onStartFocus={() => setCurrentTab('focus')} onViewFullLogbook={() => setCurrentTab('history')} onOpenNovaAI={() => setCurrentTab('nova-ai')} searchQuery={searchQuery} />}
-          {currentTab === 'focus' && <FocusScreen onBackToOverview={() => setCurrentTab('overview')} onSessionComplete={handleSessionComplete} />}
-          {currentTab === 'checkin' && <CheckInScreen metrics={metrics} onUpdateMetrics={handleUpdateMetrics} onGoToOverview={() => setCurrentTab('overview')} />}
+        <Header user={currentUser} onSearch={q => setSearchQuery(q)} onNavigate={handleSelectTab} onOpenSettings={() => handleSelectTab('settings')} onLockTerminal={handleLockTerminal} />
+        <main className={`flex-1 flex flex-col min-h-0 ${currentTab === 'nova-ai' ? 'overflow-hidden' : 'overflow-y-auto pb-16'}`}>
+          {currentTab === 'overview' && (
+            <OverviewScreen
+              metrics={metrics}
+              focusBlocks={focusBlocks}
+              onStartFocus={() => handleSelectTab('focus')}
+              onViewFullLogbook={() => handleSelectTab('history')}
+              onOpenNovaAI={() => handleSelectTab('nova-ai')}
+              onOpenSimulator={() => handleSelectTab('simulator')}
+              searchQuery={searchQuery}
+            />
+          )}
+          {currentTab === 'focus' && <FocusScreen onBackToOverview={() => handleSelectTab('overview')} onSessionComplete={handleSessionComplete} />}
+          {currentTab === 'checkin' && <CheckInScreen metrics={metrics} onUpdateMetrics={handleUpdateMetrics} onGoToOverview={() => handleSelectTab('overview')} />}
           {currentTab === 'analytics' && <AnalyticsScreen metrics={metrics} />}
           {currentTab === 'history' && <HistoryScreen focusBlocks={focusBlocks} metrics={metrics} />}
+          {currentTab === 'blueprint' && <BlueprintScreen onOpenNovaAI={() => handleSelectTab('nova-ai')} />}
           {currentTab === 'settings' && <SettingsScreen user={currentUser} />}
-          {currentTab === 'nova-ai' && <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden"><NovaAIScreen /></div>}
+          {currentTab === 'nova-ai' && <div className="flex-1 flex flex-col min-h-0 overflow-hidden"><NovaAIScreen /></div>}
+          {currentTab === 'simulator' && <SimulatorScreen onBack={() => handleSelectTab('overview')} />}
         </main>
+        {currentTab !== 'nova-ai' && (
+          <FloatingNovaAIButton onOpenNovaAI={() => handleSelectTab('nova-ai')} />
+        )}
       </div>
     </div>
   );
@@ -175,6 +248,12 @@ export default function App() {
         <Route path="/dashboard" element={
           <AppShell authState={authState} onLogout={handleLogout} />
         } />
+        <Route path="/nova-ai" element={
+          <AppShell authState={authState} onLogout={handleLogout} />
+        } />
+        <Route path="/ai" element={
+          <AppShell authState={authState} onLogout={handleLogout} />
+        } />
         <Route path="/focus" element={
           <AppShell authState={authState} onLogout={handleLogout} />
         } />
@@ -185,6 +264,12 @@ export default function App() {
           <AppShell authState={authState} onLogout={handleLogout} />
         } />
         <Route path="/history" element={
+          <AppShell authState={authState} onLogout={handleLogout} />
+        } />
+        <Route path="/blueprint" element={
+          <AppShell authState={authState} onLogout={handleLogout} />
+        } />
+        <Route path="/simulator" element={
           <AppShell authState={authState} onLogout={handleLogout} />
         } />
         <Route path="/settings" element={
