@@ -191,8 +191,8 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ focusBlocks, metri
       // Category filter (mapping 'exercise' <-> 'workout')
       if (categoryFilter !== 'all') {
         if (categoryFilter === 'exercise') {
-          if (item.category !== 'workout') return false;
-        } else if (item.category !== categoryFilter) {
+          if ((item.category as string) !== 'workout') return false;
+        } else if ((item.category as string) !== categoryFilter) {
           return false;
         }
       }

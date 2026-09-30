@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { USER_PROFILE, DEFAULT_MOCK_USER } from '../data/mockData';
 import { NovaLogo } from '../components/NovaLogo';
+import { useTheme } from '../config/ThemeContext';
+import { Moon, Sun } from 'lucide-react';
 
 export interface AuthenticatedUser {
   name: string;
@@ -66,8 +68,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }, 450);
   };
 
+  const { activeTheme, setTheme } = useTheme();
+
   return (
-    <div className="min-h-screen bg-[#faf8ff] text-[#131b2e] flex flex-col justify-between relative overflow-hidden select-none">
+    <div className="min-h-screen flex flex-col justify-between relative overflow-hidden select-none" style={{ backgroundColor: 'var(--nova-bg)', color: 'var(--nova-text-primary)' }}>
       {/* Ambient Atmospheric Background Lighting */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[550px] bg-gradient-to-b from-[#00685f]/8 via-[#712ae2]/5 to-transparent blur-3xl pointer-events-none -z-10" />
       <div className="absolute -bottom-20 -right-20 w-[600px] h-[600px] bg-[#008378]/6 blur-3xl pointer-events-none -z-10" />
@@ -88,30 +92,49 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Theme toggle on login screen */}
+        <button
+          onClick={() => setTheme(activeTheme === 'dark' ? 'light' : 'dark')}
+          aria-label="Toggle theme"
+          className="p-2.5 rounded-xl border transition-all cursor-pointer"
+          style={{ borderColor: 'var(--nova-border)', background: 'var(--nova-surface-muted)', color: 'var(--nova-text-muted)' }}
+        >
+          {activeTheme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" style={{ color: 'var(--nova-purple)' }} />}
+        </button>
       </header>
 
       {/* Main Login Card Container */}
       <main className="flex-1 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-[460px] bg-white/95 backdrop-blur-xl rounded-3xl p-8 sm:p-9 border border-[#dae2fd]/90 shadow-xl relative">
+        <div
+          className="w-full max-w-[460px] backdrop-blur-xl rounded-3xl p-8 sm:p-9 shadow-xl relative"
+          style={{ background: 'var(--nova-surface-elevated)', border: '1px solid var(--nova-border)' }}
+        >
           {/* Subtle Top Inner Edge Highlight */}
           <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#00685f]/30 to-transparent" />
 
-          {/* Central Logo / Shield Badge */}
+          {/* Logo Badge */}
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-transparent border border-[#a2e3d9]/60 flex items-center justify-center shadow-inner relative group">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-inner relative group"
+              style={{ background: 'transparent', border: '1px solid var(--nova-brand-border)' }}
+            >
               <NovaLogo size="lg" />
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white border border-[#dae2fd] flex items-center justify-center shadow-xs">
-                <Sparkles className="w-3.5 h-3.5 text-[#008378]" />
+              <div
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center shadow-xs"
+                style={{ background: 'var(--nova-overlay-surface)', border: '1px solid var(--nova-border)' }}
+              >
+                <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--nova-brand)' }} />
               </div>
             </div>
           </div>
 
           {/* Card Titles */}
           <div className="text-center mb-7">
-            <h1 className="text-2xl font-extrabold text-[#131b2e] tracking-tight">
+            <h1 className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--nova-text-primary)' }}>
               Welcome to NOVA
             </h1>
-            <p className="text-[13px] text-[#6d7a77] mt-2 leading-relaxed">
+            <p className="text-[13px] mt-2 leading-relaxed" style={{ color: 'var(--nova-text-muted)' }}>
               NOVA — Notice. Organize. Visualize. Act. Sign in with Google to synchronize your profile and get started.
             </p>
           </div>
@@ -130,7 +153,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-[#faf8ff] text-[#1f2937] text-[14.5px] font-bold border-2 border-[#e5e7eb] hover:border-[#00685f]/40 shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer group disabled:opacity-75 disabled:cursor-not-allowed"
+              className="w-full py-3.5 px-4 rounded-2xl text-[14.5px] font-bold border-2 shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer group disabled:opacity-75 disabled:cursor-not-allowed"
+              style={{ background: 'var(--nova-overlay-surface)', borderColor: 'var(--nova-border)', color: 'var(--nova-text-primary)' }}
             >
               {isLoading ? (
                 <div className="flex items-center gap-2.5 py-0.5">
@@ -172,8 +196,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </div>
 
           {/* Security Footnote */}
-          <div className="mt-6 pt-4 border-t border-[#f0f3fd] flex items-center justify-center gap-2 text-[11.5px] text-[#6d7a77]">
-            <ShieldCheck className="w-4 h-4 text-[#00685f] shrink-0" />
+          <div
+            className="mt-6 pt-4 border-t flex items-center justify-center gap-2 text-[11.5px]"
+            style={{ borderColor: 'var(--nova-divider)', color: 'var(--nova-text-muted)' }}
+          >
+            <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: 'var(--nova-brand)' }} />
             <span>Google OAuth 2.0 • End-to-End Cryptographic Encryption</span>
           </div>
         </div>

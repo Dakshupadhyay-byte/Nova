@@ -12,8 +12,23 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..900;1,300..900&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@300..800&display=swap" rel="stylesheet">
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('nova-theme');
+          var isDark = saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+          }
+        } catch(e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-[#faf8ff] text-[#131b2e] antialiased selection:bg-[#00685f]/20 selection:text-[#00685f]">
+  <body class="antialiased selection:bg-[#00685f]/20 selection:text-[#00685f]">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
