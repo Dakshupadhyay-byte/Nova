@@ -6,6 +6,7 @@
 //   • Initialize the @google/genai SDK once per process
 //   • Read GEMINI_API_KEY from the environment (never hardcoded)
 //   • Send a message + context to Gemini with the NOVA system instructions
+//   • Automatic transient error fallback from primary model to fallback model
 //   • Normalize all Gemini errors into a safe, internal error shape
 //   • Never log the API key, the full prompt, the full context, or the response body
 //
@@ -15,9 +16,10 @@
 //     canonical NOVA Health JSON — that distinction belongs entirely in
 //     aiContext.service.js
 //
-// SDK:   @google/genai@2.24.0
-// Model: gemini-2.5-flash  (stable, low-latency, price-performance)
-// API:   ai.models.generateContent({ model, contents, config: { systemInstruction } })
+// SDK:            @google/genai@2.24.0
+// Primary Model:  gemini-3.1-flash-lite (default or GEMINI_PRIMARY_MODEL)
+// Fallback Model: gemini-2.5-flash      (default or GEMINI_FALLBACK_MODEL)
+// API:            ai.models.generateContent({ model, contents, config: { systemInstruction } })
 // =============================================================================
 
 'use strict';
@@ -26,9 +28,9 @@ const { GoogleGenAI } = require('@google/genai');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-// The pinned model identifier, verified against the official Gemini API docs
-// at implementation time (2026-09-26). Change only with explicit review.
-const GEMINI_MODEL = 'gemini-3.1-flash-lite';
+// Configurable model identifiers with standard defaults
+const GEMINI_PRIMARY_MODEL = process.env.GEMINI_PRIMARY_MODEL || 'gemini-3.1-flash-lite';
+const GEMINI_FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash';
 
 // Maximum tokens we allow in the model's reply. Keeps responses concise and
 // prevents runaway token usage. Can be raised carefully if needed.
@@ -125,24 +127,160 @@ const getClient = () => {
   return _client;
 };
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+/**
+ * Testing hook to inject a mock SDK client.
+ *
+ * @param {any} mockClient
+ */
+const _setClientForTesting = (mockClient) => {
+  _client = mockClient;
+};
+
+// ─── Error Classification & Normalization ─────────────────────────────────────
 
 /**
- * Sends a user message to Gemini with the NOVA system instructions and a
- * pre-built, allowlisted context object, then returns the structured { reply, action } object.
+ * Determines whether an error is transient (temporary availability, rate limit, server/network error)
+ * and eligible for automatic fallback retry.
+ * Permanent errors (such as invalid API key, bad request, not found, or unauthenticated) return false.
  *
- * @param {string} userMessage   - The raw user message (already validated by the controller).
- * @param {Object} selectedContext - The minimal, allowlisted context object produced
- *                                   by aiContext.service.selectRelevantContext().
- * @returns {Promise<{ reply: string, action: Object|null }>} - Structured AI response.
- * @throws {{ code: string, message: string }} - A normalized internal error, safe to log.
+ * @param {any} err
+ * @returns {boolean}
  */
-const sendMessage = async (userMessage, selectedContext) => {
-  const client = getClient(); // throws GEMINI_NOT_CONFIGURED if key missing
+const isTransientError = (err) => {
+  if (!err) return false;
+  if (err.code === 'GEMINI_NOT_CONFIGURED') return false;
 
-  // Build a structured context preamble.
-  // Only fields that actually exist in selectedContext are included.
-  // The preamble is human-readable so it is easy to inspect during debugging.
+  const status = Number(err.status || err.statusCode || err.response?.status);
+
+  // Client permanent errors (4xx except 429)
+  if (status >= 400 && status < 500 && status !== 429) {
+    return false;
+  }
+
+  // Transient HTTP statuses (429 or 5xx)
+  if (status === 429 || (status >= 500 && status <= 599)) {
+    return true;
+  }
+
+  const msg = String(err.message || '').toUpperCase();
+  const code = String(err.code || '').toUpperCase();
+  const combined = `${msg} ${code}`;
+
+  // Permanent patterns (auth, permissions, bad arguments)
+  if (
+    combined.includes('API_KEY_INVALID') ||
+    combined.includes('API KEY NOT VALID') ||
+    combined.includes('INVALID_ARGUMENT') ||
+    combined.includes('PERMISSION_DENIED') ||
+    combined.includes('UNAUTHENTICATED') ||
+    combined.includes('NOT_FOUND') ||
+    combined.includes('BAD REQUEST')
+  ) {
+    return false;
+  }
+
+  // Transient patterns
+  if (
+    combined.includes('503') ||
+    combined.includes('UNAVAILABLE') ||
+    combined.includes('RESOURCE_EXHAUSTED') ||
+    combined.includes('RATE_LIMIT') ||
+    combined.includes('RATE LIMIT') ||
+    combined.includes('429') ||
+    combined.includes('OVERLOADED') ||
+    combined.includes('DEADLINE_EXCEEDED') ||
+    combined.includes('500') ||
+    combined.includes('502') ||
+    combined.includes('504') ||
+    combined.includes('INTERNAL') ||
+    combined.includes('ECONNRESET') ||
+    combined.includes('ETIMEDOUT') ||
+    combined.includes('FETCH FAILED') ||
+    combined.includes('SOCKET HANG UP') ||
+    combined.includes('NETWORK ERROR')
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+/**
+ * Normalizes the raw SDK error into a safe internal error.
+ * IMPORTANT: Do NOT forward sdkErr.message to the client — it may contain
+ * quota details, project IDs, or other infrastructure information.
+ *
+ * @param {any} sdkErr
+ * @returns {Error}
+ */
+const normalizeGeminiError = (sdkErr) => {
+  console.error('[AI] Gemini SDK error (details withheld from client):', sdkErr?.message || sdkErr);
+
+  const normalized = new Error('Gemini request failed.');
+  normalized.code = 'GEMINI_REQUEST_FAILED';
+
+  const status = Number(sdkErr?.status || sdkErr?.statusCode || sdkErr?.response?.status);
+  const msg = String(sdkErr?.message || '').toUpperCase();
+
+  // Detect quota/rate-limit errors
+  if (
+    status === 429 ||
+    msg.includes('429') ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('RATE_LIMIT') ||
+    msg.includes('RATE LIMIT')
+  ) {
+    normalized.code = 'GEMINI_RATE_LIMITED';
+  }
+
+  return normalized;
+};
+
+/**
+ * Calls client.models.generateContent using GEMINI_PRIMARY_MODEL, and automatically
+ * falls back to GEMINI_FALLBACK_MODEL if a transient failure occurs.
+ *
+ * @param {import('@google/genai').GoogleGenAI} client
+ * @param {{ contents: string, config: Object }} requestPayload
+ * @returns {Promise<Object>}
+ */
+const generateContentWithFallback = async (client, { contents, config }) => {
+  // Log only the high-level operation — never log the key, full prompt, or full response.
+  console.log('[AI] Sending request to Gemini (model: %s)', GEMINI_PRIMARY_MODEL);
+
+  try {
+    return await client.models.generateContent({
+      model: GEMINI_PRIMARY_MODEL,
+      contents,
+      config,
+    });
+  } catch (primaryErr) {
+    if (isTransientError(primaryErr)) {
+      console.warn('[AI] Primary model failed, attempting fallback model');
+      console.log('[AI] Using fallback model: %s', GEMINI_FALLBACK_MODEL);
+
+      try {
+        return await client.models.generateContent({
+          model: GEMINI_FALLBACK_MODEL,
+          contents,
+          config,
+        });
+      } catch (fallbackErr) {
+        throw normalizeGeminiError(fallbackErr);
+      }
+    }
+
+    throw normalizeGeminiError(primaryErr);
+  }
+};
+
+/**
+ * Builds a structured context preamble from selectedContext.
+ *
+ * @param {Object} selectedContext
+ * @returns {string}
+ */
+const buildContextPreamble = (selectedContext = {}) => {
   const contextLines = [];
 
   const name = selectedContext.user?.name || selectedContext.userName;
@@ -240,44 +378,41 @@ const sendMessage = async (userMessage, selectedContext) => {
     if (parts.length > 0) contextLines.push(`Health: ${parts.join(' | ')}`);
   }
 
-  const contextPreamble = contextLines.length > 0
+  return contextLines.length > 0
     ? `[User context]\n${contextLines.join('\n')}\n\n[User message]\n`
     : '[No user context available for this request]\n\n[User message]\n';
+};
 
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Sends a user message to Gemini with the NOVA system instructions and a
+ * pre-built, allowlisted context object, then returns the structured { reply, action } object.
+ *
+ * @param {string} userMessage   - The raw user message (already validated by the controller).
+ * @param {Object} selectedContext - The minimal, allowlisted context object produced
+ *                                   by aiContext.service.selectRelevantContext().
+ * @returns {Promise<{ reply: string, action: Object|null }>} - Structured AI response.
+ * @throws {{ code: string, message: string }} - A normalized internal error, safe to log.
+ */
+const sendMessage = async (userMessage, selectedContext) => {
+  const client = getClient(); // throws GEMINI_NOT_CONFIGURED if key missing
+
+  const contextPreamble = buildContextPreamble(selectedContext);
   const fullContents = contextPreamble + userMessage;
 
-  // Log only the high-level operation — never log the key, full prompt, or full response.
-  console.log('[AI] Sending request to Gemini (model: %s)', GEMINI_MODEL);
-
-  let response;
-  try {
-    response = await client.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: fullContents,
-      config: {
-        systemInstruction: NOVA_SYSTEM_INSTRUCTIONS,
-        maxOutputTokens: MAX_OUTPUT_TOKENS,
-        responseMimeType: 'application/json',
-        thinkingConfig: { thinkingLevel: 'MINIMAL' },
-      },
-    });
-  } catch (sdkErr) {
-    // Normalize the raw SDK error into a safe internal error.
-    // IMPORTANT: Do NOT forward sdkErr.message to the client — it may contain
-    // quota details, project IDs, or other infrastructure information.
-    console.error('[AI] Gemini SDK error (details withheld from client):', sdkErr.message);
-
-    const normalized = new Error('Gemini request failed.');
-    normalized.code = 'GEMINI_REQUEST_FAILED';
-    // Attempt to detect quota/rate-limit errors by HTTP status if available.
-    if (sdkErr.status === 429 || (sdkErr.message && sdkErr.message.includes('429'))) {
-      normalized.code = 'GEMINI_RATE_LIMITED';
-    }
-    throw normalized;
-  }
+  const response = await generateContentWithFallback(client, {
+    contents: fullContents,
+    config: {
+      systemInstruction: NOVA_SYSTEM_INSTRUCTIONS,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      responseMimeType: 'application/json',
+      thinkingConfig: { thinkingLevel: 'MINIMAL' },
+    },
+  });
 
   // Extract the text from the response.
-  const text = response.text;
+  const text = response?.text;
   if (!text || typeof text !== 'string' || text.trim() === '') {
     console.error('[AI] Gemini returned an empty or non-text response.');
     const err = new Error('Gemini returned an empty response.');
@@ -315,7 +450,7 @@ const sendMessage = async (userMessage, selectedContext) => {
  * @param {Object} selectedContext - Pre-built personal context object.
  * @returns {Promise<Object>}     - Parsed JSON plan containing title and days array.
  */
-const generateBlueprintPlan = async (outcome, durationDays, selectedContext) => {
+const generateBlueprintPlan = async (outcome, durationDays, selectedContext = {}) => {
   const client = getClient();
 
   const contextLines = [];
@@ -363,6 +498,9 @@ const generateBlueprintPlan = async (outcome, durationDays, selectedContext) => 
     if (h.totalSteps7d != null && Number(h.totalSteps7d) > 0) {
       parts.push(`7-day steps total: ${h.totalSteps7d} (avg ${h.avgSteps7d}/day)`);
     }
+    if (h.totalExerciseMinutes7d != null && Number(h.totalExerciseMinutes7d) > 0) {
+      parts.push(`7-day exercise total: ${h.totalExerciseMinutes7d} mins`);
+    }
     if (parts.length > 0) contextLines.push(`Health: ${parts.join(' | ')}`);
   }
 
@@ -390,28 +528,16 @@ const generateBlueprintPlan = async (outcome, durationDays, selectedContext) => 
 
   console.log('[AI] Requesting Blueprint generation from Gemini (%d days)', durationDays);
 
-  let response;
-  try {
-    response = await client.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: prompt,
-      config: {
-        systemInstruction: NOVA_SYSTEM_INSTRUCTIONS + '\nOutput ONLY valid raw JSON matching the requested structure.',
-        maxOutputTokens: 2048,
-        responseMimeType: 'application/json',
-      },
-    });
-  } catch (sdkErr) {
-    console.error('[AI] Gemini Blueprint generation SDK error:', sdkErr.message);
-    const normalized = new Error('Gemini request failed.');
-    normalized.code = 'GEMINI_REQUEST_FAILED';
-    if (sdkErr.status === 429 || (sdkErr.message && sdkErr.message.includes('429'))) {
-      normalized.code = 'GEMINI_RATE_LIMITED';
-    }
-    throw normalized;
-  }
+  const response = await generateContentWithFallback(client, {
+    contents: prompt,
+    config: {
+      systemInstruction: NOVA_SYSTEM_INSTRUCTIONS + '\nOutput ONLY valid raw JSON matching the requested structure.',
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json',
+    },
+  });
 
-  const text = response.text;
+  const text = response?.text;
   if (!text || typeof text !== 'string' || text.trim() === '') {
     console.error('[AI] Gemini returned an empty blueprint response.');
     const err = new Error('Gemini returned an empty response.');
@@ -434,5 +560,11 @@ const generateBlueprintPlan = async (outcome, durationDays, selectedContext) => 
 };
 
 // Export public interface.
-module.exports = { sendMessage, generateBlueprintPlan };
-
+module.exports = {
+  sendMessage,
+  generateBlueprintPlan,
+  isTransientError,
+  _setClientForTesting,
+  GEMINI_PRIMARY_MODEL,
+  GEMINI_FALLBACK_MODEL,
+};
