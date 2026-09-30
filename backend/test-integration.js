@@ -1,9 +1,23 @@
 // =============================================================================
 // test-integration.js — Automated End-to-End API Integration Suite
 // =============================================================================
+'use strict';
+
+require('dotenv').config();
+process.env.NODE_ENV = 'test';
+
+if (!process.env.TEST_DATABASE_URL) {
+  console.error('\n╔══════════════════════════════════════════════════════════════════════════╗');
+  console.error('║ [SAFEGUARD TRIGGERED] Refusing to run tests!                             ║');
+  console.error('║ TEST_DATABASE_URL is not configured.                                     ║');
+  console.error('║ Tests must NEVER run against or mutate the production database.          ║');
+  console.error('╚══════════════════════════════════════════════════════════════════════════╝\n');
+  process.exit(1);
+}
 
 const http = require('http');
 const app = require('./src/app');
+
 
 let server;
 

@@ -13,8 +13,13 @@ const { pool } = require('../config/db');
 const healthWebhookAuthMiddleware = require('../middleware/healthWebhookAuthMiddleware');
 const authMiddleware = require('../middleware/authMiddleware');
 const { rebuildHealthDailyAggregates } = require('../services/healthAggregation.service');
+const healthPairingRouter = require('./healthPairing.routes');
 
 const router = Router();
+
+// Mount QR Code Pairing Sub-Router (/api/health/pairing)
+router.use('/pairing', healthPairingRouter);
+
 
 /**
  * Normalizes incoming HC Webhook health metrics into structured records.
