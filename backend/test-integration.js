@@ -2,6 +2,26 @@
 // test-integration.js — Automated End-to-End API Integration Suite
 // =============================================================================
 
+'use strict';
+
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+const firebaseAdmin = require('./src/config/firebaseAdmin');
+
+// Mock verifyFirebaseToken for test suite execution without modifying firebaseAdmin.js
+const originalVerify = firebaseAdmin.verifyFirebaseToken;
+firebaseAdmin.verifyFirebaseToken = async (token) => {
+  if (token.startsWith('mock-token:') || token.startsWith('mock-dev-token-')) {
+    const parts = token.split(':');
+    const uid = parts[1] || parts[0];
+    const email = parts[2] ? decodeURIComponent(parts[2]) : `${uid}@nova.user`;
+    const name = parts[3] ? decodeURIComponent(parts[3]) : email.split('@')[0];
+    return { uid, email, name };
+  }
+  return originalVerify(token);
+};
+
 const http = require('http');
 const app = require('./src/app');
 

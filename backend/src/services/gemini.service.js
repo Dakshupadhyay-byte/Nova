@@ -1,50 +1,41 @@
 // =============================================================================
-// src/services/gemini.service.js — Gemini API Integration
+// src/services/gemini.service.js — Gemini API & Ollama Fallback Integration
 // =============================================================================
 //
 // Responsibilities:
 //   • Initialize the @google/genai SDK once per process
 //   • Read GEMINI_API_KEY from the environment (never hardcoded)
 //   • Send a message + context to Gemini with the NOVA system instructions
-//   • Normalize all Gemini errors into a safe, internal error shape
+//   • Automatic 3-tier fallback chain:
+//       Tier 1: Gemini 3.1 Flash-Lite (Primary)
+//       Tier 2: Gemini 2.5 Flash (Fallback 1)
+//       Tier 3: Ollama / Llama 3.2 (Fallback 2)
+//   • Normalize all AI errors into a safe, internal error shape
 //   • Never log the API key, the full prompt, the full context, or the response body
 //
-// The Gemini service is intentionally context-source-agnostic:
-//   • It accepts a pre-built selectedContext object (plain JS object)
-//   • It does not know whether context came from PostgreSQL or a future
-//     canonical NOVA Health JSON — that distinction belongs entirely in
-//     aiContext.service.js
-//
-// SDK:   @google/genai@2.24.0
-// Model: gemini-2.5-flash  (stable, low-latency, price-performance)
-// API:   ai.models.generateContent({ model, contents, config: { systemInstruction } })
+// SDK:            @google/genai@2.24.0
+// Primary Model:  gemini-3.1-flash-lite (default or GEMINI_PRIMARY_MODEL)
+// Fallback 1:     gemini-2.5-flash      (default or GEMINI_FALLBACK_MODEL)
+// Fallback 2:     llama3.2:latest       (default or OLLAMA_MODEL via OLLAMA_BASE_URL)
 // =============================================================================
 
 'use strict';
 
 const { GoogleGenAI } = require('@google/genai');
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants & Configuration ────────────────────────────────────────────────
 
-// The pinned model identifier, verified against the official Gemini API docs
-// at implementation time (2026-09-26). Change only with explicit review.
-const GEMINI_MODEL = 'gemini-3.1-flash-lite';
+const GEMINI_PRIMARY_MODEL = process.env.GEMINI_PRIMARY_MODEL || 'gemini-3.1-flash-lite';
+const GEMINI_FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash';
 
-// Maximum tokens we allow in the model's reply. Keeps responses concise and
-// prevents runaway token usage. Can be raised carefully if needed.
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://10.77.76.101:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:latest';
+const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS) || 8000;
+
+// Maximum tokens we allow in the model's reply.
 const MAX_OUTPUT_TOKENS = 512;
 
 // ─── NOVA system instructions ────────────────────────────────────────────────
-// These instructions shape NOVA's persona and constrain its behavior.
-// They are sent as the systemInstruction config parameter on every call.
-//
-// Rules embedded here:
-//   • NOVA works only with information it is explicitly given in the context
-//   • NOVA never invents or guesses user data it hasn't received
-//   • NOVA is honest when data is missing or insufficient
-//   • NOVA is supportive but not excessively motivational
-//   • NOVA does not make causal claims — it uses hedged language
-//   • NOVA does not give medical advice
 const NOVA_SYSTEM_INSTRUCTIONS = `
 You are NOVA, an AI companion inside a personal focus, wellness, and roadmap app.
 
@@ -97,11 +88,8 @@ You MUST ALWAYS respond with a valid raw JSON object matching:
 `.trim();
 
 // ─── Lazy initialization ──────────────────────────────────────────────────────
-// We initialize the SDK client lazily (on first call) rather than at module
-// load time. This allows the rest of the backend to start normally even if
-// GEMINI_API_KEY is not set — the error surfaces only when the AI endpoint
-// is actually called, and only when AI_ENABLED=true.
 let _client = null;
+let _ollamaCaller = null;
 
 /**
  * Returns a cached GoogleGenAI client, initializing it on first call.
@@ -119,30 +107,249 @@ const getClient = () => {
     throw err;
   }
 
-  // vertexai: false — we use the Gemini Developer API (API key auth),
-  // not Vertex AI (GCP credentials).
   _client = new GoogleGenAI({ vertexai: false, apiKey });
   return _client;
 };
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+/**
+ * Testing hook to inject a mock SDK client.
+ *
+ * @param {any} mockClient
+ */
+const _setClientForTesting = (mockClient) => {
+  _client = mockClient;
+};
 
 /**
- * Sends a user message to Gemini with the NOVA system instructions and a
- * pre-built, allowlisted context object, then returns the structured { reply, action } object.
+ * Testing hook to inject a mock Ollama caller.
  *
- * @param {string} userMessage   - The raw user message (already validated by the controller).
- * @param {Object} selectedContext - The minimal, allowlisted context object produced
- *                                   by aiContext.service.selectRelevantContext().
- * @returns {Promise<{ reply: string, action: Object|null }>} - Structured AI response.
- * @throws {{ code: string, message: string }} - A normalized internal error, safe to log.
+ * @param {Function|null} mockCaller
  */
-const sendMessage = async (userMessage, selectedContext) => {
-  const client = getClient(); // throws GEMINI_NOT_CONFIGURED if key missing
+const _setOllamaCallerForTesting = (mockCaller) => {
+  _ollamaCaller = mockCaller;
+};
 
-  // Build a structured context preamble.
-  // Only fields that actually exist in selectedContext are included.
-  // The preamble is human-readable so it is easy to inspect during debugging.
+// ─── Error Classification & Normalization ─────────────────────────────────────
+
+/**
+ * Determines whether an error is transient (temporary availability, rate limit, server/network error)
+ * and eligible for automatic fallback retry.
+ * Permanent errors (such as invalid API key, bad request, not found, or unauthenticated) return false.
+ *
+ * @param {any} err
+ * @returns {boolean}
+ */
+const isTransientError = (err) => {
+  if (!err) return false;
+  if (err.code === 'GEMINI_NOT_CONFIGURED') return false;
+
+  const status = Number(err.status || err.statusCode || err.response?.status);
+
+  // Client permanent errors (4xx except 429)
+  if (status >= 400 && status < 500 && status !== 429) {
+    return false;
+  }
+
+  // Transient HTTP statuses (429 or 5xx)
+  if (status === 429 || (status >= 500 && status <= 599)) {
+    return true;
+  }
+
+  const msg = String(err.message || '').toUpperCase();
+  const code = String(err.code || '').toUpperCase();
+  const combined = `${msg} ${code}`;
+
+  // Permanent patterns (auth, permissions, bad arguments)
+  if (
+    combined.includes('API_KEY_INVALID') ||
+    combined.includes('API KEY NOT VALID') ||
+    combined.includes('INVALID_ARGUMENT') ||
+    combined.includes('PERMISSION_DENIED') ||
+    combined.includes('UNAUTHENTICATED') ||
+    combined.includes('NOT_FOUND') ||
+    combined.includes('BAD REQUEST')
+  ) {
+    return false;
+  }
+
+  // Transient patterns
+  if (
+    combined.includes('503') ||
+    combined.includes('UNAVAILABLE') ||
+    combined.includes('RESOURCE_EXHAUSTED') ||
+    combined.includes('RATE_LIMIT') ||
+    combined.includes('RATE LIMIT') ||
+    combined.includes('429') ||
+    combined.includes('OVERLOADED') ||
+    combined.includes('DEADLINE_EXCEEDED') ||
+    combined.includes('500') ||
+    combined.includes('502') ||
+    combined.includes('504') ||
+    combined.includes('INTERNAL') ||
+    combined.includes('ECONNRESET') ||
+    combined.includes('ETIMEDOUT') ||
+    combined.includes('FETCH FAILED') ||
+    combined.includes('SOCKET HANG UP') ||
+    combined.includes('NETWORK ERROR') ||
+    combined.includes('ECONNREFUSED') ||
+    combined.includes('TIMED OUT')
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+/**
+ * Normalizes the raw SDK error into a safe internal error.
+ * IMPORTANT: Do NOT forward sdkErr.message to the client — it may contain
+ * quota details, project IDs, or other infrastructure information.
+ *
+ * @param {any} sdkErr
+ * @returns {Error}
+ */
+const normalizeGeminiError = (sdkErr) => {
+  console.error('[AI] AI service error (details withheld from client):', sdkErr?.message || sdkErr);
+
+  const normalized = new Error('AI request failed.');
+  normalized.code = 'GEMINI_REQUEST_FAILED';
+
+  const status = Number(sdkErr?.status || sdkErr?.statusCode || sdkErr?.response?.status);
+  const msg = String(sdkErr?.message || '').toUpperCase();
+
+  // Detect quota/rate-limit errors
+  if (
+    status === 429 ||
+    msg.includes('429') ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('RATE_LIMIT') ||
+    msg.includes('RATE LIMIT')
+  ) {
+    normalized.code = 'GEMINI_RATE_LIMITED';
+  }
+
+  return normalized;
+};
+
+// ─── Ollama Caller ────────────────────────────────────────────────────────────
+
+/**
+ * Calls Ollama /api/generate with timeout.
+ *
+ * @param {{ model: string, prompt: string, baseUrl?: string, timeoutMs?: number }} options
+ * @returns {Promise<{ response: string, done: boolean, model: string }>}
+ */
+const callOllama = async ({ model, prompt, baseUrl = OLLAMA_BASE_URL, timeoutMs = OLLAMA_TIMEOUT_MS }) => {
+  if (_ollamaCaller) {
+    return await _ollamaCaller({ model, prompt, baseUrl, timeoutMs });
+  }
+
+  const endpoint = `${baseUrl.replace(/\/+$/, '')}/api/generate`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        prompt,
+        stream: false,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const err = new Error(`Ollama HTTP error ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      const timeoutErr = new Error(`Ollama request timed out after ${timeoutMs}ms`);
+      timeoutErr.code = 'ETIMEDOUT';
+      throw timeoutErr;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+/**
+ * Executes a generateContent call with a 3-tier fallback chain:
+ *   1. Primary: Gemini 3.1 Flash-Lite
+ *   2. Fallback 1: Gemini 2.5 Flash (on transient error)
+ *   3. Fallback 2: Ollama / Llama 3.2 (on transient error)
+ *
+ * @param {import('@google/genai').GoogleGenAI} client
+ * @param {{ contents: string, config: Object }} requestPayload
+ * @returns {Promise<{ text: string }>}
+ */
+const generateContentWithFallback = async (client, { contents, config }) => {
+  console.log('[AI] Sending request to Gemini (model: %s)', GEMINI_PRIMARY_MODEL);
+
+  try {
+    return await client.models.generateContent({
+      model: GEMINI_PRIMARY_MODEL,
+      contents,
+      config,
+    });
+  } catch (primaryErr) {
+    if (!isTransientError(primaryErr)) {
+      throw normalizeGeminiError(primaryErr);
+    }
+
+    console.warn('[AI] Gemini primary failed, attempting Gemini fallback');
+    console.log('[AI] Using fallback model: %s', GEMINI_FALLBACK_MODEL);
+
+    try {
+      return await client.models.generateContent({
+        model: GEMINI_FALLBACK_MODEL,
+        contents,
+        config,
+      });
+    } catch (geminiFallbackErr) {
+      if (!isTransientError(geminiFallbackErr)) {
+        throw normalizeGeminiError(geminiFallbackErr);
+      }
+
+      console.warn('[AI] Gemini fallback failed, attempting Ollama fallback');
+      console.log('[AI] Using Ollama fallback model: %s', OLLAMA_MODEL);
+
+      try {
+        const systemText = config?.systemInstruction || NOVA_SYSTEM_INSTRUCTIONS;
+        const promptForOllama = `${systemText}\n\n${contents}`;
+        const ollamaRes = await callOllama({
+          model: OLLAMA_MODEL,
+          prompt: promptForOllama,
+          baseUrl: OLLAMA_BASE_URL,
+          timeoutMs: OLLAMA_TIMEOUT_MS,
+        });
+
+        return {
+          text: ollamaRes?.response || '',
+        };
+      } catch (ollamaErr) {
+        throw normalizeGeminiError(ollamaErr);
+      }
+    }
+  }
+};
+
+/**
+ * Builds a structured context preamble from selectedContext.
+ *
+ * @param {Object} selectedContext
+ * @returns {string}
+ */
+const buildContextPreamble = (selectedContext = {}) => {
   const contextLines = [];
 
   const name = selectedContext.user?.name || selectedContext.userName;
@@ -168,14 +375,16 @@ const sendMessage = async (userMessage, selectedContext) => {
     } else {
       contextLines.push(`Today's Roadmap Mission: None scheduled for current date (${rm.currentDate}).`);
     }
-    const daysSummary = rm.days.map((d) => {
-      let desc = `Day ${d.dayNumber} (ID ${d.id}, Date: ${d.date}, Status: ${d.status}): "${d.title}" - "${d.mission}"`;
-      if (d.originalDate && d.originalDate !== d.date) {
-        desc += ` [Rescheduled from ${d.originalDate}]`;
-      }
-      return desc;
-    });
-    contextLines.push(`Roadmap Days List:\n  ${daysSummary.join('\n  ')}`);
+    if (Array.isArray(rm.days) && rm.days.length > 0) {
+      const daysSummary = rm.days.map((d) => {
+        let desc = `Day ${d.dayNumber} (ID ${d.id}, Date: ${d.date}, Status: ${d.status}): "${d.title}" - "${d.mission}"`;
+        if (d.originalDate && d.originalDate !== d.date) {
+          desc += ` [Rescheduled from ${d.originalDate}]`;
+        }
+        return desc;
+      });
+      contextLines.push(`Roadmap Days List:\n  ${daysSummary.join('\n  ')}`);
+    }
   } else {
     contextLines.push(`Active Roadmap: None.`);
   }
@@ -240,47 +449,44 @@ const sendMessage = async (userMessage, selectedContext) => {
     if (parts.length > 0) contextLines.push(`Health: ${parts.join(' | ')}`);
   }
 
-  const contextPreamble = contextLines.length > 0
+  return contextLines.length > 0
     ? `[User context]\n${contextLines.join('\n')}\n\n[User message]\n`
     : '[No user context available for this request]\n\n[User message]\n';
+};
 
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Sends a user message to Gemini with the NOVA system instructions and a
+ * pre-built, allowlisted context object, then returns the structured { reply, action } object.
+ *
+ * @param {string} userMessage   - The raw user message (already validated by the controller).
+ * @param {Object} selectedContext - The minimal, allowlisted context object produced
+ *                                   by aiContext.service.selectRelevantContext().
+ * @returns {Promise<{ reply: string, action: Object|null }>} - Structured AI response.
+ * @throws {{ code: string, message: string }} - A normalized internal error, safe to log.
+ */
+const sendMessage = async (userMessage, selectedContext) => {
+  const client = getClient(); // throws GEMINI_NOT_CONFIGURED if key missing
+
+  const contextPreamble = buildContextPreamble(selectedContext);
   const fullContents = contextPreamble + userMessage;
 
-  // Log only the high-level operation — never log the key, full prompt, or full response.
-  console.log('[AI] Sending request to Gemini (model: %s)', GEMINI_MODEL);
-
-  let response;
-  try {
-    response = await client.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: fullContents,
-      config: {
-        systemInstruction: NOVA_SYSTEM_INSTRUCTIONS,
-        maxOutputTokens: MAX_OUTPUT_TOKENS,
-        responseMimeType: 'application/json',
-        thinkingConfig: { thinkingLevel: 'MINIMAL' },
-      },
-    });
-  } catch (sdkErr) {
-    // Normalize the raw SDK error into a safe internal error.
-    // IMPORTANT: Do NOT forward sdkErr.message to the client — it may contain
-    // quota details, project IDs, or other infrastructure information.
-    console.error('[AI] Gemini SDK error (details withheld from client):', sdkErr.message);
-
-    const normalized = new Error('Gemini request failed.');
-    normalized.code = 'GEMINI_REQUEST_FAILED';
-    // Attempt to detect quota/rate-limit errors by HTTP status if available.
-    if (sdkErr.status === 429 || (sdkErr.message && sdkErr.message.includes('429'))) {
-      normalized.code = 'GEMINI_RATE_LIMITED';
-    }
-    throw normalized;
-  }
+  const response = await generateContentWithFallback(client, {
+    contents: fullContents,
+    config: {
+      systemInstruction: NOVA_SYSTEM_INSTRUCTIONS,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      responseMimeType: 'application/json',
+      thinkingConfig: { thinkingLevel: 'MINIMAL' },
+    },
+  });
 
   // Extract the text from the response.
-  const text = response.text;
+  const text = response?.text;
   if (!text || typeof text !== 'string' || text.trim() === '') {
-    console.error('[AI] Gemini returned an empty or non-text response.');
-    const err = new Error('Gemini returned an empty response.');
+    console.error('[AI] AI provider returned an empty or non-text response.');
+    const err = new Error('AI provider returned an empty response.');
     err.code = 'GEMINI_EMPTY_RESPONSE';
     throw err;
   }
@@ -294,15 +500,15 @@ const sendMessage = async (userMessage, selectedContext) => {
     parsed = { reply: text.trim(), action: null };
   }
 
-  const reply = typeof parsed.reply === 'string' && parsed.reply.trim() !== ''
+  const reply = typeof parsed?.reply === 'string' && parsed.reply.trim() !== ''
     ? parsed.reply.trim()
     : text.trim();
 
-  const action = (parsed.action && typeof parsed.action === 'object' && parsed.action.type === 'RESCHEDULE_ROADMAP_DAY')
+  const action = (parsed?.action && typeof parsed.action === 'object' && parsed.action.type === 'RESCHEDULE_ROADMAP_DAY')
     ? parsed.action
     : null;
 
-  console.log('[AI] Gemini response received successfully (action=%s).', action ? action.type : 'none');
+  console.log('[AI] AI response processed successfully (action=%s).', action ? action.type : 'none');
   return { reply, action };
 };
 
@@ -315,7 +521,7 @@ const sendMessage = async (userMessage, selectedContext) => {
  * @param {Object} selectedContext - Pre-built personal context object.
  * @returns {Promise<Object>}     - Parsed JSON plan containing title and days array.
  */
-const generateBlueprintPlan = async (outcome, durationDays, selectedContext) => {
+const generateBlueprintPlan = async (outcome, durationDays, selectedContext = {}) => {
   const client = getClient();
 
   const contextLines = [];
@@ -363,6 +569,9 @@ const generateBlueprintPlan = async (outcome, durationDays, selectedContext) => 
     if (h.totalSteps7d != null && Number(h.totalSteps7d) > 0) {
       parts.push(`7-day steps total: ${h.totalSteps7d} (avg ${h.avgSteps7d}/day)`);
     }
+    if (h.totalExerciseMinutes7d != null && Number(h.totalExerciseMinutes7d) > 0) {
+      parts.push(`7-day exercise total: ${h.totalExerciseMinutes7d} mins`);
+    }
     if (parts.length > 0) contextLines.push(`Health: ${parts.join(' | ')}`);
   }
 
@@ -388,33 +597,21 @@ const generateBlueprintPlan = async (outcome, durationDays, selectedContext) => 
     `}\n` +
     `The days array MUST contain exactly ${durationDays} objects with dayNumber sequentially numbered from 1 to ${durationDays}.`;
 
-  console.log('[AI] Requesting Blueprint generation from Gemini (%d days)', durationDays);
+  console.log('[AI] Requesting Blueprint generation from AI service (%d days)', durationDays);
 
-  let response;
-  try {
-    response = await client.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: prompt,
-      config: {
-        systemInstruction: NOVA_SYSTEM_INSTRUCTIONS + '\nOutput ONLY valid raw JSON matching the requested structure.',
-        maxOutputTokens: 2048,
-        responseMimeType: 'application/json',
-      },
-    });
-  } catch (sdkErr) {
-    console.error('[AI] Gemini Blueprint generation SDK error:', sdkErr.message);
-    const normalized = new Error('Gemini request failed.');
-    normalized.code = 'GEMINI_REQUEST_FAILED';
-    if (sdkErr.status === 429 || (sdkErr.message && sdkErr.message.includes('429'))) {
-      normalized.code = 'GEMINI_RATE_LIMITED';
-    }
-    throw normalized;
-  }
+  const response = await generateContentWithFallback(client, {
+    contents: prompt,
+    config: {
+      systemInstruction: NOVA_SYSTEM_INSTRUCTIONS + '\nOutput ONLY valid raw JSON matching the requested structure.',
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json',
+    },
+  });
 
-  const text = response.text;
+  const text = response?.text;
   if (!text || typeof text !== 'string' || text.trim() === '') {
-    console.error('[AI] Gemini returned an empty blueprint response.');
-    const err = new Error('Gemini returned an empty response.');
+    console.error('[AI] AI provider returned an empty blueprint response.');
+    const err = new Error('AI provider returned an empty response.');
     err.code = 'GEMINI_EMPTY_RESPONSE';
     throw err;
   }
@@ -424,8 +621,8 @@ const generateBlueprintPlan = async (outcome, durationDays, selectedContext) => 
     const cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
     parsed = JSON.parse(cleanedText);
   } catch (parseErr) {
-    console.error('[AI] Failed to parse Gemini blueprint response as JSON:', parseErr.message);
-    const err = new Error('Gemini output invalid JSON.');
+    console.error('[AI] Failed to parse AI blueprint response as JSON:', parseErr.message);
+    const err = new Error('AI provider output invalid JSON.');
     err.code = 'GEMINI_MALFORMED_RESPONSE';
     throw err;
   }
@@ -434,5 +631,16 @@ const generateBlueprintPlan = async (outcome, durationDays, selectedContext) => 
 };
 
 // Export public interface.
-module.exports = { sendMessage, generateBlueprintPlan };
-
+module.exports = {
+  sendMessage,
+  generateBlueprintPlan,
+  isTransientError,
+  callOllama,
+  _setClientForTesting,
+  _setOllamaCallerForTesting,
+  GEMINI_PRIMARY_MODEL,
+  GEMINI_FALLBACK_MODEL,
+  OLLAMA_BASE_URL,
+  OLLAMA_MODEL,
+  OLLAMA_TIMEOUT_MS,
+};
