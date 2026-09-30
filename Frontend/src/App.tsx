@@ -10,6 +10,7 @@ import { getDashboard } from './services/api';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { FloatingNovaAIButton } from './components/FloatingNovaAIButton';
+import NovaOrbCursor from './components/NovaOrbCursor';
 import { OverviewScreen } from './screens/OverviewScreen';
 import { FocusScreen } from './screens/FocusScreen';
 import { CheckInScreen } from './screens/CheckInScreen';
@@ -249,6 +250,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <NovaOrbCursor />
       <Routes>
         {/* Public landing page */}
         <Route path="/" element={<LandingPage />} />
