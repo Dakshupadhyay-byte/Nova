@@ -26,6 +26,7 @@ import {
   INITIAL_FOCUS_BLOCKS,
   getActiveUser,
   setActiveUser,
+  clearActiveUser,
 } from './data/mockData';
 import { NavTab, MetricOverview, FocusBlock } from './types';
 
@@ -229,8 +230,14 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await logOut();
-    setAuthState({ isAuthenticated: false, isLoading: false });
+    try {
+      await logOut();
+    } catch (err) {
+      console.error('[AUTH] Sign out error:', err);
+    } finally {
+      clearActiveUser();
+      setAuthState({ isAuthenticated: false, isLoading: false });
+    }
   };
 
   return (

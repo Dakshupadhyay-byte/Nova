@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Search, Bell, Sparkles, X,
   LayoutGrid, Target, Activity, BarChart3, Clock,
@@ -77,6 +77,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   const inputRef     = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const notifRef     = useRef<HTMLDivElement>(null);
+  const userMenuRef  = useRef<HTMLDivElement>(null);
 
   const results     = matchFeatures(searchVal);
   const quickAccess = QUICK_ACCESS.map((tab) => FEATURES.find((f) => f.tab === tab)!);
@@ -96,8 +98,15 @@ export const Header: React.FC<HeaderProps> = ({
   // Close on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsFocused(false); setShowNotifications(false); setShowUserMenu(false);
+      const target = e.target as Node;
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        setIsFocused(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(target)) {
+        setShowNotifications(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setShowUserMenu(false);
       }
     };
     document.addEventListener('mousedown', h);
@@ -197,7 +206,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Right Controls */}
       <div className="flex items-center gap-4 ml-4 shrink-0">
         {/* Notifications */}
-        <div className="relative">
+        <div ref={notifRef} className="relative">
           <button onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false); }} aria-label="Notifications" className="w-9 h-9 rounded-xl flex items-center justify-center text-[#3d4947] hover:text-[#131b2e] hover:bg-[#f0f3fd] border border-[#dae2fd]/70 transition-colors relative">
             <Bell className="w-4 h-4" />
             {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#712ae2] rounded-full ring-2 ring-white" />}
@@ -221,12 +230,20 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Lock */}
-        <button onClick={onLockTerminal} title="Lock Terminal / Sign In Screen" className="w-9 h-9 rounded-xl flex items-center justify-center text-[#3d4947] hover:text-[#00685f] hover:bg-[#eefaf8] border border-[#dae2fd]/70 transition-colors cursor-pointer">
+        <button
+          type="button"
+          onClick={async () => {
+            console.log('LOGOUT BUTTON CLICKED');
+            await onLockTerminal?.();
+          }}
+          title="Lock Terminal / Sign In Screen"
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-[#3d4947] hover:text-[#00685f] hover:bg-[#eefaf8] border border-[#dae2fd]/70 transition-colors cursor-pointer"
+        >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
         </button>
 
         {/* User */}
-        <div className="relative">
+        <div ref={userMenuRef} className="relative">
           <div onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }} className="flex items-center gap-3 pl-2 cursor-pointer group" title="User Profile Menu">
             <img src={user.avatar || USER_PROFILE.avatar} alt={user.name} referrerPolicy="no-referrer" className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-2xs group-hover:ring-2 group-hover:ring-[#00685f]/30 transition-all" />
             <div className="hidden sm:flex flex-col text-left"><span className="text-[13px] font-bold text-[#131b2e] leading-tight group-hover:text-[#00685f] transition-colors">{user.name}</span></div>
@@ -240,7 +257,19 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
               <div className="py-1">
                 <button onClick={() => { setShowUserMenu(false); onOpenSettings?.(); }} className="w-full text-left px-3 py-2 rounded-xl text-[12.5px] font-medium text-[#3d4947] hover:bg-[#f0f3fd] hover:text-[#131b2e] transition-colors">System Settings</button>
-                <button onClick={() => { setShowUserMenu(false); onLockTerminal?.(); }} className="w-full text-left px-3 py-2 rounded-xl text-[12.5px] font-medium text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-between"><span>Lock Terminal / Sign Out</span><span className="text-[10px] font-mono opacity-70">ESC</span></button>
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    console.log('LOGOUT BUTTON CLICKED');
+                    setShowUserMenu(false);
+                    await onLockTerminal?.();
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-[12.5px] font-medium text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-between cursor-pointer"
+                >
+                  <span>Lock Terminal / Sign Out</span>
+                  <span className="text-[10px] font-mono opacity-70">ESC</span>
+                </button>
               </div>
             </div>
           )}

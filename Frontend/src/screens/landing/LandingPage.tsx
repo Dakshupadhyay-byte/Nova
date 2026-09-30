@@ -364,17 +364,26 @@ export const LandingPage: React.FC = () => {
 
       {/* Sticky NOVA Acronym Progress Indicator */}
       <div className="sticky top-16 z-40 flex justify-center py-3 pointer-events-none">
-        <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md border border-[#E5EBE9] rounded-full px-5 py-2 shadow-sm pointer-events-auto">
-          {NOVA_ACRONYM.map((item) => (
-            <button key={item.letter} onClick={() => scrollTo(item.word.toLowerCase())}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-bold transition-all cursor-pointer ${activeSection === item.word.toLowerCase()
-                ? 'bg-[#00685F] text-white'
-                : 'text-[#687573] hover:text-[#0D2422]'
-                }`}>
-              <span>{item.letter}</span>
-              <span className="hidden sm:block text-[11px] font-medium">{item.word}</span>
-            </button>
-          ))}
+        <div className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-md border border-[#E5EBE9] rounded-full p-1.5 sm:px-4 sm:py-1.5 shadow-sm pointer-events-auto max-w-[95vw] overflow-x-auto no-scrollbar">
+          {NOVA_ACRONYM.map((item) => {
+            const isActive = activeSection === item.word.toLowerCase();
+            const letter = item.letter;
+            const remaining = item.word.slice(1).toLowerCase();
+            return (
+              <button
+                key={item.letter}
+                onClick={() => scrollTo(item.word.toLowerCase())}
+                className={`flex items-baseline gap-0.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer shrink-0 ${
+                  isActive
+                    ? 'bg-[#00685F] text-white shadow-xs'
+                    : 'text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5]'
+                }`}
+              >
+                <span className="text-[14px] sm:text-[15px] font-bold leading-none">{letter}</span>
+                <span className="text-[11px] sm:text-[12px] font-medium leading-none">{remaining}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
