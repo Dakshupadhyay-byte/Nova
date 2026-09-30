@@ -26,6 +26,7 @@ import {
   INITIAL_FOCUS_BLOCKS,
   getActiveUser,
   setActiveUser,
+  clearActiveUser,
 } from './data/mockData';
 import { NavTab, MetricOverview, FocusBlock } from './types';
 
@@ -144,11 +145,11 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf8ff] text-[#131b2e] flex flex-col md:flex-row antialiased">
+    <div className="h-screen bg-[#faf8ff] text-[#131b2e] flex flex-col md:flex-row antialiased overflow-hidden">
       <Sidebar currentTab={currentTab} onSelectTab={handleSelectTab} quantumSync={metrics.quantumSyncPercent} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header user={currentUser} onSearch={q => setSearchQuery(q)} onOpenSettings={() => handleSelectTab('settings')} onLockTerminal={handleLockTerminal} />
-        <main className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-16">
+        <Header user={currentUser} onSearch={q => setSearchQuery(q)} onNavigate={handleSelectTab} onOpenSettings={() => handleSelectTab('settings')} onLockTerminal={handleLockTerminal} />
+        <main className={`flex-1 flex flex-col min-h-0 ${currentTab === 'nova-ai' ? 'overflow-hidden' : 'overflow-y-auto pb-16'}`}>
           {currentTab === 'overview' && (
             <OverviewScreen
               metrics={metrics}
@@ -163,7 +164,7 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
           {currentTab === 'focus' && <FocusScreen onBackToOverview={() => handleSelectTab('overview')} onSessionComplete={handleSessionComplete} />}
           {currentTab === 'checkin' && <CheckInScreen metrics={metrics} onUpdateMetrics={handleUpdateMetrics} onGoToOverview={() => handleSelectTab('overview')} />}
           {currentTab === 'analytics' && <AnalyticsScreen metrics={metrics} />}
-          {currentTab === 'history' && <HistoryScreen focusBlocks={focusBlocks} />}
+          {currentTab === 'history' && <HistoryScreen focusBlocks={focusBlocks} metrics={metrics} />}
           {currentTab === 'blueprint' && <BlueprintScreen onOpenNovaAI={() => handleSelectTab('nova-ai')} />}
           {currentTab === 'settings' && <SettingsScreen user={currentUser} />}
           {currentTab === 'nova-ai' && <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden"><NovaAIScreen onNavigateToRoadmap={() => handleSelectTab('blueprint')} /></div>}
@@ -229,8 +230,14 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await logOut();
-    setAuthState({ isAuthenticated: false, isLoading: false });
+    try {
+      await logOut();
+    } catch (err) {
+      console.error('[AUTH] Sign out error:', err);
+    } finally {
+      clearActiveUser();
+      setAuthState({ isAuthenticated: false, isLoading: false });
+    }
   };
 
   return (

@@ -10,6 +10,7 @@ import {
   NextOrObserver
 } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
+import { clearActiveUser } from '../data/mockData';
 
 export interface AuthStateUser {
   uid: string;
@@ -49,9 +50,14 @@ console.log("Bearer Token:", `Bearer ${token}`);
  */
 export const logOut = async (): Promise<void> => {
   try {
+    console.log('Signing out...');
     await signOut(auth);
+    console.log('Firebase signOut successful');
   } catch (err) {
-    console.error('[AUTH SERVICE] Logout error:', err);
+    console.error('Firebase signOut failed:', err);
+    throw err;
+  } finally {
+    clearActiveUser();
   }
 };
 
@@ -61,6 +67,7 @@ export const logOut = async (): Promise<void> => {
 export const onAuthChange = (callback: (user: AuthStateUser | null, token: string | null) => void) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
+      console.log('Auth state changed, user:', user.email);
       try {
         const token = await user.getIdToken();
         callback(
@@ -73,9 +80,12 @@ export const onAuthChange = (callback: (user: AuthStateUser | null, token: strin
           token
         );
       } catch (err) {
+        clearActiveUser();
         callback(null, null);
       }
     } else {
+      console.log('Auth state changed, user: null');
+      clearActiveUser();
       callback(null, null);
     }
   });
