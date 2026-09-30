@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon --watch src --watch server.js server.js",
-    "test": "echo \"No tests configured yet\" && exit 0"
+    "test": "node test-health-phase1.js && node test-health-phase2.js && node test-health-phase3.js && node test-health-pairing.js"
   },
   "keywords": [
     "node",
