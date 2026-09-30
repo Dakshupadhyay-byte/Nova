@@ -119,7 +119,7 @@ export interface SimulationResult {
 
 // ─── AI Roadmap Action Types ───────────────────────────────────────────────────
 
-export interface RoadmapAIAction {
+export interface RoadmapRescheduleAIAction {
   type: 'RESCHEDULE_ROADMAP_DAY';
   dayId: number;
   dayNumber: number;
@@ -127,4 +127,22 @@ export interface RoadmapAIAction {
   currentDate: string;
   targetDate: string;
 }
+
+export interface RoadmapShiftAIAction {
+  type: 'SHIFT_ROADMAP';
+  blueprintId: number;
+  blueprintTitle: string;
+  dayCount: number;
+  direction: 'forward';
+  affectedDaysCount: number;
+  previewDays: Array<{
+    dayId: number;
+    dayNumber: number;
+    title: string;
+    currentDate: string;
+    targetDate: string;
+  }>;
+}
+
+export type RoadmapAIAction = RoadmapRescheduleAIAction | RoadmapShiftAIAction;
 

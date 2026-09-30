@@ -112,7 +112,7 @@ const aiChat = async (req, res, next) => {
 
     // ── Gemini call ─────────────────────────────────────────────────────────
     const geminiResult = await geminiService.sendMessage(trimmed, selectedContext);
-    const reply = typeof geminiResult === 'object' && geminiResult !== null
+    let reply = typeof geminiResult === 'object' && geminiResult !== null
       ? geminiResult.reply
       : (typeof geminiResult === 'string' ? geminiResult : '');
     const rawAction = typeof geminiResult === 'object' && geminiResult !== null
@@ -133,10 +133,10 @@ const aiChat = async (req, res, next) => {
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (targetDay && targetDay.status === 'pending' && dateRegex.test(rawAction.targetDate)) {
           // Ensure targetDate is not already occupied by another day in the same roadmap
-          const isOccupied = activeRoadmap.days.some(
+          const occupyingDay = activeRoadmap.days.find(
             (d) => d.id !== rawAction.dayId && d.date === rawAction.targetDate
           );
-          if (!isOccupied) {
+          if (!occupyingDay) {
             validatedAction = {
               type: 'RESCHEDULE_ROADMAP_DAY',
               dayId: Number(targetDay.id),
@@ -145,7 +145,81 @@ const aiChat = async (req, res, next) => {
               currentDate: targetDay.date,
               targetDate: rawAction.targetDate,
             };
+          } else {
+            // Target date is occupied: override reply so user is never asked to confirm an invalid/null action
+            const nextFree = activeRoadmap.earliestAvailableDates?.[0] || 'a date after the roadmap';
+            reply = `I cannot move Day ${targetDay.dayNumber} ('${targetDay.title}') to ${rawAction.targetDate} because that date is already occupied by Day ${occupyingDay.dayNumber} ('${occupyingDay.title}'). The earliest available date is ${nextFree}.`;
           }
+        } else if (targetDay && targetDay.status !== 'pending') {
+          reply = `Day ${targetDay.dayNumber} ('${targetDay.title}') has already been ${targetDay.status} and cannot be rescheduled.`;
+        }
+      }
+    } else if (
+      rawAction &&
+      rawAction.type === 'SHIFT_ROADMAP' &&
+      typeof rawAction.dayCount === 'number' &&
+      Number.isInteger(rawAction.dayCount) &&
+      rawAction.dayCount >= 1 &&
+      rawAction.dayCount <= 30 &&
+      (rawAction.direction === undefined || rawAction.direction === 'forward')
+    ) {
+      const activeRoadmap = dbContext.roadmap;
+      if (activeRoadmap && Array.isArray(activeRoadmap.days)) {
+        const pendingDays = activeRoadmap.days.filter((d) => d.status === 'pending');
+        const fixedDays = activeRoadmap.days.filter((d) => d.status !== 'pending');
+
+        if (pendingDays.length > 0) {
+          const fixedDatesSet = new Set(fixedDays.map((d) => d.date));
+          let hasConflict = false;
+          let conflictingDetail = null;
+
+          const previewDays = [];
+          for (const pDay of pendingDays) {
+            const [y, m, d] = pDay.date.split('-').map(Number);
+            const targetDateObj = new Date(Date.UTC(y, m - 1, d + rawAction.dayCount));
+            const targetDate = targetDateObj.toISOString().split('T')[0];
+
+            if (fixedDatesSet.has(targetDate)) {
+              hasConflict = true;
+              conflictingDetail = { pDay, targetDate };
+              break;
+            }
+            previewDays.push({
+              dayId: Number(pDay.id),
+              dayNumber: Number(pDay.dayNumber),
+              title: pDay.title,
+              currentDate: pDay.date,
+              targetDate,
+            });
+          }
+
+          if (!hasConflict) {
+            validatedAction = {
+              type: 'SHIFT_ROADMAP',
+              blueprintId: Number(activeRoadmap.id),
+              blueprintTitle: activeRoadmap.title,
+              dayCount: Number(rawAction.dayCount),
+              direction: 'forward',
+              affectedDaysCount: pendingDays.length,
+              previewDays,
+            };
+          } else {
+            reply = `Cannot shift roadmap by ${rawAction.dayCount} days because Day ${conflictingDetail.pDay.dayNumber} would move to ${conflictingDetail.targetDate}, which conflicts with an already completed/skipped day.`;
+          }
+        } else {
+          reply = "You don't have any pending missions in your active Roadmap to shift.";
+        }
+      } else {
+        reply = "You don't currently have an active Roadmap to shift.";
+      }
+    }
+
+    // Safeguard (Invariant): If action is null, ensure reply never contains confirmation prompts
+    if (!validatedAction && typeof reply === 'string') {
+      if (/\b(?:please\s+confirm|confirm\s+the\s+reschedule|confirm\s+the\s+shift|confirm\s+shift|confirm\s+below|confirm\s+if\s+you\s+would\s+like|confirm\s+to\s+proceed|review\s+and\s+confirm|review\s+the\s+proposed\s+changes)\b/i.test(reply)) {
+        reply = reply.replace(/\s*(?:please\s+confirm|please\s+review)[\s\S]*/i, '').trim();
+        if (!reply) {
+          reply = "I cannot perform that roadmap modification. Please check your schedule and try again.";
         }
       }
     }

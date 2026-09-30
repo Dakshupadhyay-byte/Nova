@@ -11,7 +11,7 @@
 'use strict';
 
 const { Router }                       = require('express');
-const { createBlueprint, getBlueprints, rescheduleBlueprintDay } = require('../controllers/blueprints.controller');
+const { createBlueprint, getBlueprints, rescheduleBlueprintDay, shiftBlueprint } = require('../controllers/blueprints.controller');
 const authMiddleware                   = require('../middleware/authMiddleware');
 
 const router = Router();
@@ -27,6 +27,10 @@ router.post('/', authMiddleware, createBlueprint);
 // PATCH /api/blueprints/days/:dayId/reschedule
 // Reschedules a pending roadmap mission to a new calendar date.
 router.patch('/days/:dayId/reschedule', authMiddleware, rescheduleBlueprintDay);
+
+// PATCH /api/blueprints/:blueprintId/shift
+// Shifts all pending missions in an active roadmap forward by N days.
+router.patch('/:blueprintId/shift', authMiddleware, shiftBlueprint);
 
 module.exports = router;
 

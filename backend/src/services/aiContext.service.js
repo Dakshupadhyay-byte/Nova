@@ -186,6 +186,24 @@ const buildDbContext = async (userId) => {
     const skippedDays = days.filter((d) => d.status === 'skipped');
     const rescheduledDays = days.filter((d) => d.originalDate && d.originalDate !== d.date);
 
+    const occupiedDates = Array.from(new Set(days.map((d) => d.date))).sort();
+    
+    // Helper to calculate earliest unoccupied dates after current date
+    const earliestAvailableDates = [];
+    if (currentDate) {
+      const occupiedSet = new Set(occupiedDates);
+      let offset = 1;
+      while (earliestAvailableDates.length < 5 && offset <= 365) {
+        const [y, m, d] = currentDate.split('-').map(Number);
+        const candDate = new Date(Date.UTC(y, m - 1, d + offset));
+        const candStr = candDate.toISOString().split('T')[0];
+        if (!occupiedSet.has(candStr)) {
+          earliestAvailableDates.push(candStr);
+        }
+        offset++;
+      }
+    }
+
     context.roadmap = {
       id: Number(activeBpRow.id),
       title: activeBpRow.title,
@@ -209,6 +227,8 @@ const buildDbContext = async (userId) => {
       completedCount: completedDays.length,
       skippedCount: skippedDays.length,
       rescheduledCount: rescheduledDays.length,
+      occupiedDates,
+      earliestAvailableDates,
       days,
     };
   }

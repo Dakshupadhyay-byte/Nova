@@ -7,7 +7,7 @@ import {
   SUGGESTED_PROMPTS,
   AIMessage,
 } from '../services/novaAIService';
-import { rescheduleBlueprintDay } from '../services/api';
+import { rescheduleBlueprintDay, shiftBlueprint } from '../services/api';
 import { getIdToken } from '../services/auth';
 import { RoadmapAIAction } from '../types';
 
@@ -50,9 +50,10 @@ interface ChatMessageProps {
   message: AIMessage;
   onConfirmAction: (messageId: string, action: RoadmapAIAction) => void;
   onCancelAction: (messageId: string) => void;
+  onNavigateToRoadmap?: () => void;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message, onConfirmAction, onCancelAction }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, onConfirmAction, onCancelAction, onNavigateToRoadmap }) => {
   const isUser = message.role === 'user';
 
   if (isUser) {
@@ -79,15 +80,26 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onConfirmAction, onC
         <div className="bg-white border border-[#e2e7ff]/80 rounded-2xl rounded-tl-sm px-4 py-3 shadow-xs">
           <p className="text-[14px] leading-relaxed text-[#131b2e] whitespace-pre-wrap">{message.content}</p>
 
-          {/* AI Roadmap Action Confirmation Card */}
+          {/* AI Roadmap Action Confirmation Card: Single Reschedule */}
           {message.action?.type === 'RESCHEDULE_ROADMAP_DAY' && (
             <div className="mt-3">
               {message.actionState === 'confirmed' ? (
-                <div className="p-3 bg-[#e2f5f1] border border-[#99dfd5] rounded-xl flex items-center gap-2 text-[12.5px] text-[#00685f] font-semibold">
-                  <CheckCircle2 className="w-4 h-4 text-[#00685f] shrink-0" />
-                  <span>
-                    Roadmap updated: Day {message.action.dayNumber} rescheduled to {formatDateLabel(message.action.targetDate)}.
-                  </span>
+                <div className="p-3 bg-[#e2f5f1] border border-[#99dfd5] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-[12.5px] text-[#00685f]">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-[#00685f] shrink-0" />
+                    <span>
+                      Roadmap updated: Day {message.action.dayNumber} rescheduled to {formatDateLabel(message.action.targetDate)}.
+                    </span>
+                  </div>
+                  {onNavigateToRoadmap && (
+                    <button
+                      onClick={onNavigateToRoadmap}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00685f] hover:bg-[#005049] text-white text-[11.5px] font-bold transition-all shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
+                    >
+                      <Compass className="w-3.5 h-3.5" />
+                      <span>View in Roadmap</span>
+                    </button>
+                  )}
                 </div>
               ) : message.actionState === 'cancelled' ? (
                 <div className="p-2.5 bg-[#f0f2fd] border border-[#dae2fd] rounded-xl text-[12px] text-[#6d7a77] italic">
@@ -98,7 +110,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onConfirmAction, onC
                   <div className="flex items-center gap-2 mb-1.5">
                     <Compass className="w-4 h-4 text-[#00685f]" />
                     <span className="text-[11px] font-bold text-[#00685f] uppercase tracking-wider font-mono">
-                      Adjust Roadmap Proposal
+                      Action Required · Confirm Reschedule
                     </span>
                   </div>
                   <p className="text-[13.5px] font-bold text-[#131b2e]">
@@ -136,6 +148,135 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onConfirmAction, onC
                         <>
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Confirm Reschedule</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => onCancelAction(message.id)}
+                      disabled={message.actionState === 'loading'}
+                      className="px-3 py-1.5 rounded-lg border border-[#dae2fd] bg-white hover:bg-[#f0f3fd] text-[#44474f] text-[12px] font-medium transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* AI Roadmap Action Confirmation Card: Shift Entire Remaining Roadmap */}
+          {message.action?.type === 'SHIFT_ROADMAP' && (
+            <div className="mt-3">
+              {message.actionState === 'confirmed' ? (
+                <div className="p-3 bg-[#e2f5f1] border border-[#99dfd5] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-[12.5px] text-[#00685f]">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-[#00685f] shrink-0" />
+                    <span>
+                      Roadmap updated: Your remaining missions have been shifted by {message.action.dayCount} day{message.action.dayCount > 1 ? 's' : ''}.
+                    </span>
+                  </div>
+                  {onNavigateToRoadmap && (
+                    <button
+                      onClick={onNavigateToRoadmap}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00685f] hover:bg-[#005049] text-white text-[11.5px] font-bold transition-all shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
+                    >
+                      <Compass className="w-3.5 h-3.5" />
+                      <span>View in Roadmap</span>
+                    </button>
+                  )}
+                </div>
+              ) : message.actionState === 'cancelled' ? (
+                <div className="p-2.5 bg-[#f0f2fd] border border-[#dae2fd] rounded-xl text-[12px] text-[#6d7a77] italic">
+                  Roadmap shift was cancelled.
+                </div>
+              ) : (
+                <div className="p-3.5 bg-[#faf8ff] border border-[#d9dcf5] rounded-xl shadow-xs">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Compass className="w-4 h-4 text-[#00685f]" />
+                    <span className="text-[11px] font-bold text-[#00685f] uppercase tracking-wider font-mono">
+                      Action Required · Confirm Roadmap Shift
+                    </span>
+                  </div>
+                  <p className="text-[13.5px] font-bold text-[#131b2e]">
+                    Shift remaining Roadmap by {message.action.dayCount} day{message.action.dayCount > 1 ? 's' : ''}
+                  </p>
+
+                  {/* Concise Preview List */}
+                  {Array.isArray(message.action.previewDays) && message.action.previewDays.length > 0 && (
+                    <div className="mt-2.5 space-y-1.5 bg-white/70 border border-[#dae2fd] rounded-lg p-2.5 max-h-48 overflow-y-auto">
+                      {message.action.previewDays.length <= 5 ? (
+                        message.action.previewDays.map((d) => (
+                          <div key={d.dayId} className="flex items-center justify-between text-[11.5px] text-[#44474f] py-0.5 border-b border-[#f0f2fd] last:border-0">
+                            <span className="font-semibold text-[#131b2e] truncate max-w-[140px] sm:max-w-[200px]">
+                              Day {d.dayNumber}: {d.title}
+                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0 font-mono text-[11px]">
+                              <span className="text-[#687573]">{formatDateLabel(d.currentDate)}</span>
+                              <ArrowRight className="w-3 h-3 text-[#9BA8A5]" />
+                              <span className="font-bold text-[#00685f]">{formatDateLabel(d.targetDate)}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <>
+                          {message.action.previewDays.slice(0, 3).map((d) => (
+                            <div key={d.dayId} className="flex items-center justify-between text-[11.5px] text-[#44474f] py-0.5 border-b border-[#f0f2fd]">
+                              <span className="font-semibold text-[#131b2e] truncate max-w-[140px] sm:max-w-[200px]">
+                                Day {d.dayNumber}: {d.title}
+                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0 font-mono text-[11px]">
+                                <span className="text-[#687573]">{formatDateLabel(d.currentDate)}</span>
+                                <ArrowRight className="w-3 h-3 text-[#9BA8A5]" />
+                                <span className="font-bold text-[#00685f]">{formatDateLabel(d.targetDate)}</span>
+                              </div>
+                            </div>
+                          ))}
+                          <div className="py-1 text-center text-[11px] font-medium text-[#7C5CFC] bg-[#f5f3ff] rounded">
+                            + {message.action.previewDays.length - 5} more missions
+                          </div>
+                          {message.action.previewDays.slice(-2).map((d) => (
+                            <div key={d.dayId} className="flex items-center justify-between text-[11.5px] text-[#44474f] py-0.5 border-b border-[#f0f2fd] last:border-0">
+                              <span className="font-semibold text-[#131b2e] truncate max-w-[140px] sm:max-w-[200px]">
+                                Day {d.dayNumber}: {d.title}
+                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0 font-mono text-[11px]">
+                                <span className="text-[#687573]">{formatDateLabel(d.currentDate)}</span>
+                                <ArrowRight className="w-3 h-3 text-[#9BA8A5]" />
+                                <span className="font-bold text-[#00685f]">{formatDateLabel(d.targetDate)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  <p className="text-[11.5px] text-[#687573] mt-2 font-medium">
+                    {message.action.affectedDaysCount} pending missions affected
+                  </p>
+
+                  {message.actionError && (
+                    <div className="mt-2.5 p-2 bg-red-50 border border-red-200 rounded-lg flex items-start gap-1.5 text-[12px] text-red-700">
+                      <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 shrink-0" />
+                      <span>{message.actionError}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 mt-3">
+                    <button
+                      onClick={() => onConfirmAction(message.id, message.action!)}
+                      disabled={message.actionState === 'loading'}
+                      className="px-3.5 py-1.5 rounded-lg bg-[#00685f] hover:bg-[#005049] text-white text-[12px] font-bold transition-all shadow-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {message.actionState === 'loading' ? (
+                        <>
+                          <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Shifting Roadmap…</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Confirm Shift</span>
                         </>
                       )}
                     </button>
@@ -230,7 +371,11 @@ const EmptyState: React.FC<EmptyStateProps> = ({ onPromptClick, isLoading }) => 
 );
 
 // ─── Main NOVA AI Screen ──────────────────────────────────────────────────────
-export const NovaAIScreen: React.FC = () => {
+interface NovaAIScreenProps {
+  onNavigateToRoadmap?: () => void;
+}
+
+export const NovaAIScreen: React.FC<NovaAIScreenProps> = ({ onNavigateToRoadmap }) => {
   const [messages, setMessages]   = useState<AIMessage[]>([]);
   const [input, setInput]         = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -256,6 +401,60 @@ export const NovaAIScreen: React.FC = () => {
     ta.style.height = `${Math.min(ta.scrollHeight, 140)}px`;
   }, [input]);
 
+  const handleConfirmAction = useCallback(async (messageId: string, action: RoadmapAIAction) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, actionState: 'loading', actionError: null } : m))
+    );
+
+    try {
+      const token = await getIdToken();
+      if (!token) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, actionState: 'error', actionError: 'Authentication required. Please log in.' } : m
+          )
+        );
+        return;
+      }
+
+      let res: { success: boolean; data: any; error: any };
+      if (action.type === 'RESCHEDULE_ROADMAP_DAY') {
+        res = await rescheduleBlueprintDay(token, action.dayId, action.targetDate);
+      } else if (action.type === 'SHIFT_ROADMAP') {
+        res = await shiftBlueprint(token, action.blueprintId, action.dayCount);
+      } else {
+        return;
+      }
+
+      if (res.success) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === messageId ? { ...m, actionState: 'confirmed', actionError: null } : m))
+        );
+        // Trigger roadmap refresh in any listening components
+        window.dispatchEvent(new CustomEvent('nova_roadmap_updated'));
+      } else {
+        const errMsg = res.error?.code === 'DATE_OCCUPIED'
+          ? 'A mission is already scheduled for this date in your Roadmap.'
+          : (res.error?.message || 'Failed to update roadmap.');
+        setMessages((prev) =>
+          prev.map((m) => (m.id === messageId ? { ...m, actionState: 'error', actionError: errMsg } : m))
+        );
+      }
+    } catch (err: any) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, actionState: 'error', actionError: 'Network error while updating roadmap.' } : m
+        )
+      );
+    }
+  }, []);
+
+  const handleCancelAction = useCallback((messageId: string) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, actionState: 'cancelled', actionError: null } : m))
+    );
+  }, []);
+
   const handleSend = useCallback(async (text?: string) => {
     const messageText = (text ?? input).trim();
     if (!messageText || isLoading) return;
@@ -269,6 +468,66 @@ export const NovaAIScreen: React.FC = () => {
       content:   messageText,
       timestamp: new Date(),
     };
+
+    // Check if there is exactly one pending action in current messages
+    const pendingActionMessages = messages.filter(
+      (m) =>
+        (m.action?.type === 'RESCHEDULE_ROADMAP_DAY' || m.action?.type === 'SHIFT_ROADMAP') &&
+        m.actionState === 'pending'
+    );
+
+    if (pendingActionMessages.length === 1) {
+      const pendingMsg = pendingActionMessages[0];
+      const normalized = messageText.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+
+      const CONFIRMATION_PHRASES = new Set([
+        'yes',
+        'yes please',
+        'yes confirm',
+        'confirm',
+        'i confirm',
+        'confirmed',
+        'confirm it',
+        'please confirm',
+        'do it',
+        'go ahead',
+        'proceed',
+        'move it',
+        'shift it',
+        'shift roadmap',
+        'okay',
+        'ok',
+        'sure',
+        'yep',
+        'yeah',
+      ]);
+
+      const CANCELLATION_PHRASES = new Set([
+        'no',
+        'no thanks',
+        'cancel',
+        'dont do it',
+        'dont move it',
+        'dont shift it',
+        'never mind',
+        'nevermind',
+        'stop',
+        'nope',
+        'dismiss',
+      ]);
+
+      if (CONFIRMATION_PHRASES.has(normalized)) {
+        setMessages((prev) => [...prev, userMessage]);
+        await handleConfirmAction(pendingMsg.id, pendingMsg.action!);
+        return;
+      }
+
+      if (CANCELLATION_PHRASES.has(normalized)) {
+        setMessages((prev) => [...prev, userMessage]);
+        handleCancelAction(pendingMsg.id);
+        return;
+      }
+    }
 
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
@@ -290,53 +549,7 @@ export const NovaAIScreen: React.FC = () => {
     } else {
       setError(result.error ?? "I couldn't reach NOVA AI right now. Please try again.");
     }
-  }, [input, isLoading]);
-
-  const handleConfirmAction = async (messageId: string, action: RoadmapAIAction) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === messageId ? { ...m, actionState: 'loading', actionError: null } : m))
-    );
-
-    try {
-      const token = await getIdToken();
-      if (!token) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === messageId ? { ...m, actionState: 'error', actionError: 'Authentication required. Please log in.' } : m
-          )
-        );
-        return;
-      }
-
-      const res = await rescheduleBlueprintDay(token, action.dayId, action.targetDate);
-      if (res.success) {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === messageId ? { ...m, actionState: 'confirmed', actionError: null } : m))
-        );
-        // Trigger roadmap refresh in any listening components
-        window.dispatchEvent(new CustomEvent('nova_roadmap_updated'));
-      } else {
-        const errMsg = res.error?.code === 'DATE_OCCUPIED'
-          ? 'A mission is already scheduled for this date in your Roadmap.'
-          : (res.error?.message || 'Failed to reschedule mission.');
-        setMessages((prev) =>
-          prev.map((m) => (m.id === messageId ? { ...m, actionState: 'error', actionError: errMsg } : m))
-        );
-      }
-    } catch (err: any) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === messageId ? { ...m, actionState: 'error', actionError: 'Network error while rescheduling.' } : m
-        )
-      );
-    }
-  };
-
-  const handleCancelAction = (messageId: string) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === messageId ? { ...m, actionState: 'cancelled', actionError: null } : m))
-    );
-  };
+  }, [input, isLoading, messages, handleConfirmAction, handleCancelAction]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -394,6 +607,7 @@ export const NovaAIScreen: React.FC = () => {
                   message={msg}
                   onConfirmAction={handleConfirmAction}
                   onCancelAction={handleCancelAction}
+                  onNavigateToRoadmap={onNavigateToRoadmap}
                 />
               ))}
               {isLoading && <TypingIndicator />}

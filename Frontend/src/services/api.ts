@@ -209,6 +209,23 @@ export async function rescheduleBlueprintDay(
   });
 }
 
+/**
+ * Shift all pending missions in an active roadmap forward by N days.
+ * PATCH /api/blueprints/:blueprintId/shift
+ */
+export async function shiftBlueprint(
+  token: string,
+  blueprintId: number,
+  days: number
+): Promise<{ success: boolean; data: { shiftedCount: number; days: BlueprintDay[] } | null; error: any }> {
+  return fetchWithAuth<{ shiftedCount: number; days: BlueprintDay[] }>(`/blueprints/${blueprintId}/shift`, token, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      days,
+    }),
+  });
+}
+
 // ─── What-If Simulator ────────────────────────────────────────────────────────
 
 export interface WhatIfRequest {

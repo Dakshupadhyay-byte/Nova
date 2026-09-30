@@ -286,6 +286,101 @@ const rescheduleBlueprintDay = async (req, res, next) => {
   }
 };
 
-module.exports = { createBlueprint, getBlueprints, rescheduleBlueprintDay };
+/**
+ * PATCH /api/blueprints/:blueprintId/shift
+ *
+ * Authenticated endpoint to shift all pending missions in an active roadmap forward by N days.
+ */
+const shiftBlueprint = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authentication token required.',
+        },
+      });
+    }
+
+    const { blueprintId } = req.params;
+    const parsedBlueprintId = Number(blueprintId);
+    if (!Number.isInteger(parsedBlueprintId) || parsedBlueprintId <= 0) {
+      return sendValidationError(res, 'blueprintId', 'blueprintId must be a valid positive integer.');
+    }
+
+    const { days, dayCount } = req.body || {};
+    const rawDays = days !== undefined ? days : dayCount;
+
+    if (rawDays === undefined || rawDays === null || rawDays === '') {
+      return sendValidationError(res, 'days', 'days is required.');
+    }
+
+    const parsedDays = Number(rawDays);
+    if (!Number.isInteger(parsedDays) || parsedDays < 1 || parsedDays > 30) {
+      return sendValidationError(res, 'days', 'days must be an integer between 1 and 30.');
+    }
+
+    const result = await blueprintService.shiftBlueprint(userId, parsedBlueprintId, parsedDays);
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+      error: null,
+    });
+
+  } catch (err) {
+    if (err.code === 'BLUEPRINT_NOT_FOUND') {
+      return res.status(404).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'BLUEPRINT_NOT_FOUND',
+          message: err.message,
+        },
+      });
+    }
+
+    if (err.code === 'BLUEPRINT_NOT_ACTIVE') {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'BLUEPRINT_NOT_ACTIVE',
+          message: err.message,
+        },
+      });
+    }
+
+    if (err.code === 'NO_PENDING_MISSIONS') {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'NO_PENDING_MISSIONS',
+          message: err.message,
+        },
+      });
+    }
+
+    if (err.code === 'DATE_OCCUPIED') {
+      return res.status(409).json({
+        success: false,
+        data: null,
+        error: {
+          code: 'DATE_OCCUPIED',
+          message: err.message,
+        },
+      });
+    }
+
+    next(err);
+  }
+};
+
+module.exports = { createBlueprint, getBlueprints, rescheduleBlueprintDay, shiftBlueprint };
+
 
 

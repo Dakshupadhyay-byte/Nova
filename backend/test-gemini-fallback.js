@@ -339,6 +339,50 @@ async function runGeminiFallbackTests() {
   }
 
   // ---------------------------------------------------------------------------
+  // TEST G2: Ollama returns valid SHIFT_ROADMAP JSON → Action preserved
+  // ---------------------------------------------------------------------------
+  totalTests++;
+  try {
+    const mockClient = {
+      models: {
+        generateContent: async () => {
+          const err = new Error('503 Service Unavailable');
+          err.status = 503;
+          throw err;
+        },
+      },
+    };
+
+    geminiService._setClientForTesting(mockClient);
+    geminiService._setOllamaCallerForTesting(async () => ({
+      model: 'llama3.2:latest',
+      response: JSON.stringify({
+        reply: 'I can shift your remaining Roadmap forward by 2 days. Please review and confirm below.',
+        action: {
+          type: 'SHIFT_ROADMAP',
+          dayCount: 2,
+          direction: 'forward',
+        },
+      }),
+      done: true,
+    }));
+
+    const result = await geminiService.sendMessage('Shift remaining roadmap by 2 days', {
+      roadmap: { id: 10, title: 'Roadmap' },
+    });
+
+    assert.strictEqual(result.reply, 'I can shift your remaining Roadmap forward by 2 days. Please review and confirm below.');
+    assert.ok(result.action, 'Action should be present');
+    assert.strictEqual(result.action.type, 'SHIFT_ROADMAP');
+    assert.strictEqual(result.action.dayCount, 2);
+    assert.strictEqual(result.action.direction, 'forward');
+
+    recordPass('G2. Ollama returns valid SHIFT_ROADMAP JSON → Action preserved');
+  } catch (err) {
+    recordFail('G2. Ollama returns valid SHIFT_ROADMAP JSON → Action preserved', err);
+  }
+
+  // ---------------------------------------------------------------------------
   // TEST H: Ollama returns malformed JSON → Action becomes null, request does not crash
   // ---------------------------------------------------------------------------
   totalTests++;

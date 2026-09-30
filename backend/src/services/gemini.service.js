@@ -47,22 +47,54 @@ Your role:
 
 Roadmap Action Rules (strict):
 - You can understand and assist with the user's active Roadmap missions.
-- When the user explicitly requests to reschedule/move a single Roadmap mission (e.g. "Move today's mission to tomorrow", "Reschedule Day 3 to Friday", "Move mission 4 to 2026-10-01"):
-  1. Identify the specific pending mission from the user's active Roadmap context.
-  2. If the mission is completed or skipped, DO NOT propose rescheduling it. Explain why in your reply and set "action": null.
-  3. Calculate the target date in YYYY-MM-DD format based on the "Current date" in context.
-  4. Ensure target date is not already occupied by another day in the Roadmap. If occupied, DO NOT propose an action, explain in your reply, and set "action": null.
-  5. If valid, set "action" to:
-     {
-       "type": "RESCHEDULE_ROADMAP_DAY",
-       "dayId": <number>,
-       "dayNumber": <number>,
-       "missionTitle": "<string>",
-       "currentDate": "<YYYY-MM-DD>",
-       "targetDate": "<YYYY-MM-DD>"
-     }
-- If the user's request is ambiguous (e.g. "Move it", "Change my plan"), ask a clarifying question in your reply and set "action": null.
-- If the user asks to shift or move multiple missions (e.g. "Shift all remaining days by 2 days"), explain that Phase 1 only supports single mission rescheduling, and set "action": null.
+- Two Structured Action Types:
+  1. RESCHEDULE_ROADMAP_DAY (Single Mission Rescheduling):
+     - When the user explicitly requests to reschedule/move a single Roadmap mission (e.g. "Move today's mission to tomorrow", "Reschedule Day 3 to Friday", "Move mission 4 to 2026-10-01"):
+       * Identify the specific pending mission from the user's active Roadmap context.
+       * If the mission is completed or skipped, DO NOT propose rescheduling it. Explain why in your reply and set "action": null.
+       * When the user asks to move to a SPECIFIC date (e.g. "tomorrow", "Friday", "2026-10-02"):
+         - Check if that specific date is in "Occupied dates in Roadmap".
+         - If it IS occupied:
+           * DO NOT propose an action (MUST set "action": null).
+           * NEVER say "Please confirm" or ask for confirmation.
+           * In your reply, clearly explain that the date is already occupied by Day X ("Title"), and suggest the earliest unoccupied date(s) from "Earliest available (unoccupied) dates".
+         - If it is NOT occupied:
+           * Propose the action:
+             {
+               "type": "RESCHEDULE_ROADMAP_DAY",
+               "dayId": <number>,
+               "dayNumber": <number>,
+               "missionTitle": "<string>",
+               "currentDate": "<YYYY-MM-DD>",
+               "targetDate": "<YYYY-MM-DD>"
+             }
+           * In your reply, propose the change and ask the user to confirm below.
+       * When the user asks to move to the "next available day", "next free day", "whenever you want", or "next available day after tomorrow":
+         - Find the earliest unoccupied date on or after the requested timeframe from "Earliest available (unoccupied) dates" or context.
+         - Propose the action with that unoccupied targetDate.
+         - In your reply, propose the change and ask the user to confirm below.
+
+  2. SHIFT_ROADMAP (Whole / Remaining Roadmap Shift):
+     - When the user explicitly requests to push, shift, delay, or move the entire REMAINING active Roadmap forward by a number of days (e.g. "Push my whole Roadmap by 2 days", "Move my remaining Roadmap forward by 3 days", "Shift the rest of my schedule by 1 day", "Start my remaining Roadmap from tomorrow"):
+       * Calculate dayCount as a positive integer (number of calendar days forward, between 1 and 30).
+       * If user says "start my remaining roadmap from tomorrow" or "start my roadmap from Friday", determine how many days forward from the current earliest pending mission that represents (e.g. if today is 2026-09-30 and the earliest pending mission is scheduled today, starting tomorrow means dayCount = 1).
+       * If user has no active roadmap or no pending missions, state that and set "action": null.
+       * Propose the action:
+         {
+           "type": "SHIFT_ROADMAP",
+           "dayCount": <number>,
+           "direction": "forward"
+         }
+       * In your reply, propose the shift (e.g. "I can shift your remaining Roadmap forward by 2 days. This will move your pending missions. Please review the proposed changes below and confirm.") and explicitly ask the user to confirm via the confirmation button below.
+       * NEVER claim or imply that the change has already occurred.
+       * Do not output individual date arrays; the backend calculates the resulting dates.
+     - If the user's request is vague (e.g. "change my whole schedule"), ask a clarifying question in your reply and set "action": null.
+     - Do not use SHIFT_ROADMAP for single-mission moves, mission swapping, or mission deletion.
+
+- Conversational reply wording rule (CRITICAL):
+  * ONLY ask for confirmation (e.g., "Please confirm the reschedule below." or "Please review the proposed changes below and confirm.") when "action" is NOT null.
+  * When "action" is null, NEVER ask for confirmation and NEVER say "Please confirm".
+  * NEVER claim or imply that the change has already occurred (e.g., do NOT say "I've rescheduled Day X", "Day X has been moved", or "The shift is complete").
 - If the user has no active Roadmap, state that and set "action": null.
 - For all other questions or general conversation, set "action": null.
 
@@ -83,6 +115,10 @@ You MUST ALWAYS respond with a valid raw JSON object matching:
     "missionTitle": string,
     "currentDate": "YYYY-MM-DD",
     "targetDate": "YYYY-MM-DD"
+  } | {
+    "type": "SHIFT_ROADMAP",
+    "dayCount": number,
+    "direction": "forward"
   }
 }
 `.trim();
@@ -375,6 +411,12 @@ const buildContextPreamble = (selectedContext = {}) => {
     } else {
       contextLines.push(`Today's Roadmap Mission: None scheduled for current date (${rm.currentDate}).`);
     }
+    if (Array.isArray(rm.occupiedDates) && rm.occupiedDates.length > 0) {
+      contextLines.push(`Occupied dates in Roadmap: ${rm.occupiedDates.join(', ')}`);
+    }
+    if (Array.isArray(rm.earliestAvailableDates) && rm.earliestAvailableDates.length > 0) {
+      contextLines.push(`Earliest available (unoccupied) dates: ${rm.earliestAvailableDates.join(', ')}`);
+    }
     if (Array.isArray(rm.days) && rm.days.length > 0) {
       const daysSummary = rm.days.map((d) => {
         let desc = `Day ${d.dayNumber} (ID ${d.id}, Date: ${d.date}, Status: ${d.status}): "${d.title}" - "${d.mission}"`;
@@ -504,9 +546,11 @@ const sendMessage = async (userMessage, selectedContext) => {
     ? parsed.reply.trim()
     : text.trim();
 
-  const action = (parsed?.action && typeof parsed.action === 'object' && parsed.action.type === 'RESCHEDULE_ROADMAP_DAY')
-    ? parsed.action
-    : null;
+  const action = (
+    parsed?.action &&
+    typeof parsed.action === 'object' &&
+    (parsed.action.type === 'RESCHEDULE_ROADMAP_DAY' || parsed.action.type === 'SHIFT_ROADMAP')
+  ) ? parsed.action : null;
 
   console.log('[AI] AI response processed successfully (action=%s).', action ? action.type : 'none');
   return { reply, action };

@@ -191,7 +191,7 @@ async function runAIRoadmapTests() {
   console.log('\n[7] Testing Valid Reschedule Proposal (Day 3 -> 2026-11-15)...');
   const day3 = insertedDays[2];
   geminiService.sendMessage = async () => ({
-    reply: "I can move Day 3 ('Mission Day 3') to 2026-11-15 for you.",
+    reply: "I've prepared a request to move Day 3 to November 15, 2026. Please confirm the change below.",
     action: {
       type: 'RESCHEDULE_ROADMAP_DAY',
       dayId: Number(day3.id),
@@ -207,6 +207,11 @@ async function runAIRoadmapTests() {
   console.log('Action type RESCHEDULE_ROADMAP_DAY:', reschRes.body?.data?.action?.type === 'RESCHEDULE_ROADMAP_DAY' ? 'PASSED' : 'FAILED');
   console.log('Action dayId match:', reschRes.body?.data?.action?.dayId === Number(day3.id) ? 'PASSED' : 'FAILED');
   console.log('Action targetDate === "2026-11-15":', reschRes.body?.data?.action?.targetDate === '2026-11-15' ? 'PASSED' : 'FAILED');
+  console.log('Reply instructs confirmation:', reschRes.body?.data?.reply?.includes('confirm') ? 'PASSED' : 'FAILED');
+
+  // Verify DB log_date has NOT changed upon proposal
+  const { rows: preDbCheck } = await db.query('SELECT log_date::TEXT FROM blueprint_days WHERE id = $1', [day3.id]);
+  console.log('Database unchanged after AI proposal:', preDbCheck[0].log_date === day3.log_date ? 'PASSED' : 'FAILED');
 
   // TEST 8: Ambiguous request -> action: null
   console.log('\n[8] Testing Ambiguous Request ("Move it")...');
@@ -254,15 +259,29 @@ async function runAIRoadmapTests() {
   const occRes = await request('POST', '/api/ai/chat', { message: 'Move Day 3 to Day 2 date' }, headersUser1);
   console.log('Controller rejected occupied date action (action === null):', occRes.body?.data?.action === null ? 'PASSED' : 'FAILED');
 
-  // TEST 11: Multi-day request in Phase 1 -> action: null
-  console.log('\n[11] Testing Multi-day Request ("Shift all remaining days")...');
+  // TEST 11: Valid SHIFT_ROADMAP proposal (Push whole roadmap by 2 days)
+  console.log('\n[11] Testing Valid SHIFT_ROADMAP Proposal ("Push my whole Roadmap by 2 days")...');
   geminiService.sendMessage = async () => ({
-    reply: "Currently, I can only reschedule individual missions one at a time. Which mission would you like to move?",
-    action: null,
+    reply: "I can shift your remaining Roadmap forward by 2 days. This will move 6 pending missions. Please review the proposed changes below and confirm.",
+    action: {
+      type: 'SHIFT_ROADMAP',
+      dayCount: 2,
+      direction: 'forward',
+    },
   });
 
-  const multiRes = await request('POST', '/api/ai/chat', { message: 'Shift all remaining days' }, headersUser1);
-  console.log('action is null:', multiRes.body?.data?.action === null ? 'PASSED' : 'FAILED');
+  const shiftRes = await request('POST', '/api/ai/chat', { message: 'Push my whole Roadmap by 2 days' }, headersUser1);
+  console.log('Status: 200', shiftRes.status === 200 ? 'PASSED' : 'FAILED');
+  console.log('Action type SHIFT_ROADMAP:', shiftRes.body?.data?.action?.type === 'SHIFT_ROADMAP' ? 'PASSED' : 'FAILED');
+  console.log('Action dayCount === 2:', shiftRes.body?.data?.action?.dayCount === 2 ? 'PASSED' : 'FAILED');
+  console.log('Action blueprintId matches:', shiftRes.body?.data?.action?.blueprintId === Number(blueprintId) ? 'PASSED' : 'FAILED');
+  console.log('Action affectedDaysCount === 6:', shiftRes.body?.data?.action?.affectedDaysCount === 6 ? 'PASSED' : 'FAILED');
+  console.log('Action has previewDays array:', Array.isArray(shiftRes.body?.data?.action?.previewDays) ? 'PASSED' : 'FAILED');
+  console.log('Reply instructs confirmation:', shiftRes.body?.data?.reply?.includes('confirm') ? 'PASSED' : 'FAILED');
+
+  // Verify DB log_date has NOT changed upon proposal
+  const { rows: preShiftCheck } = await db.query('SELECT log_date::TEXT FROM blueprint_days WHERE blueprint_id = $1 ORDER BY day_number', [blueprintId]);
+  console.log('Database unchanged after AI shift proposal:', preShiftCheck[1].log_date === insertedDays[1].log_date ? 'PASSED' : 'FAILED');
 
   // TEST 12: Malformed Gemini Output -> Graceful fallback with action: null
   console.log('\n[12] Testing Malformed Gemini Output -> Fallback to action: null...');
@@ -278,16 +297,87 @@ async function runAIRoadmapTests() {
   // Restore original sendMessage
   geminiService.sendMessage = originalSendMessage;
 
-  console.log('\n--- SECTION 3: EXECUTING PROPOSED ACTION VIA RESCHEDULE ENDPOINT ---');
+  console.log('\n--- SECTION 3: EXECUTING PROPOSED ACTIONS VIA ENDPOINTS ---');
 
-  // TEST 13: Executing confirmed action via existing PATCH /api/blueprints/days/:dayId/reschedule
+  // TEST 13: Executing confirmed single mission action via existing PATCH /api/blueprints/days/:dayId/reschedule
   console.log('\n[13] Testing Execution of Proposed Action (Day 3 -> 2026-11-15)...');
   const execRes = await request('PATCH', `/api/blueprints/days/${day3.id}/reschedule`, { newDate: '2026-11-15' }, headersUser1);
   console.log('Reschedule Status: 200', execRes.status === 200 ? 'PASSED' : 'FAILED');
   console.log('Updated logDate:', execRes.body?.data?.day?.logDate ? 'PASSED' : 'FAILED');
   console.log('originalLogDate stored:', Boolean(execRes.body?.data?.day?.originalLogDate) ? 'PASSED' : 'FAILED');
 
-  console.log('\n=== ALL AI ROADMAP TESTS PASSED SUCCESSFULLY ===');
+  // TEST 14: Executing confirmed whole-roadmap shift via PATCH /api/blueprints/:blueprintId/shift
+  console.log('\n[14] Testing Execution of Whole-Roadmap Shift (+2 days)...');
+  const { rows: preShiftDays } = await db.query(
+    `SELECT id, day_number, log_date::TEXT, status, original_log_date FROM blueprint_days WHERE blueprint_id = $1 ORDER BY day_number ASC`,
+    [blueprintId]
+  );
+
+  const execShiftRes = await request('PATCH', `/api/blueprints/${blueprintId}/shift`, { days: 2 }, headersUser1);
+  console.log('Shift Status: 200', execShiftRes.status === 200 ? 'PASSED' : 'FAILED');
+  console.log('ShiftedCount === 6:', execShiftRes.body?.data?.shiftedCount === 6 ? 'PASSED' : 'FAILED');
+
+  const { rows: postShiftDays } = await db.query(
+    `SELECT id, day_number, log_date::TEXT, status, original_log_date FROM blueprint_days WHERE blueprint_id = $1 ORDER BY day_number ASC`,
+    [blueprintId]
+  );
+
+  // Day 1 was completed -> must NOT have moved
+  console.log('Completed Day 1 did NOT move:', postShiftDays[0].log_date === preShiftDays[0].log_date ? 'PASSED' : 'FAILED');
+
+  // Days 2..7 were pending -> must have moved +2 days
+  const day2Moved = new Date(postShiftDays[1].log_date) - new Date(preShiftDays[1].log_date) === 2 * 24 * 60 * 60 * 1000;
+  console.log('Pending Day 2 moved exactly +2 days:', day2Moved ? 'PASSED' : 'FAILED');
+
+  // Day 7 original_log_date preserved
+  console.log('Day 7 original_log_date preserved after whole-roadmap shift:', Boolean(postShiftDays[6].original_log_date) ? 'PASSED' : 'FAILED');
+
+  // TEST 15: Skipped day remains fixed during whole-roadmap shift
+  console.log('\n[15] Testing Skipped Day Preservation During Shift...');
+  await db.query(`UPDATE blueprint_days SET status = 'skipped' WHERE id = $1`, [insertedDays[1].id]); // Mark Day 2 as skipped
+
+  const { rows: preSkipShift } = await db.query(
+    `SELECT id, day_number, log_date::TEXT, status FROM blueprint_days WHERE blueprint_id = $1 ORDER BY day_number ASC`,
+    [blueprintId]
+  );
+
+  const skipShiftRes = await request('PATCH', `/api/blueprints/${blueprintId}/shift`, { days: 1 }, headersUser1);
+  console.log('Shift with skipped day Status: 200', skipShiftRes.status === 200 ? 'PASSED' : 'FAILED');
+  console.log('Shifted count === 5 (excluding completed Day 1 and skipped Day 2):', skipShiftRes.body?.data?.shiftedCount === 5 ? 'PASSED' : 'FAILED');
+
+  const { rows: postSkipShift } = await db.query(
+    `SELECT id, day_number, log_date::TEXT, status FROM blueprint_days WHERE blueprint_id = $1 ORDER BY day_number ASC`,
+    [blueprintId]
+  );
+
+  console.log('Skipped Day 2 did NOT move:', postSkipShift[1].log_date === preSkipShift[1].log_date ? 'PASSED' : 'FAILED');
+  console.log('Completed Day 1 did NOT move:', postSkipShift[0].log_date === preSkipShift[0].log_date ? 'PASSED' : 'FAILED');
+
+  // TEST 16: User isolation (User 2 cannot shift User 1's roadmap)
+  console.log('\n[16] Testing User Isolation on Shift (User 2 attempting to shift User 1 blueprint -> Expect 404)...');
+  const isolShiftRes = await request('PATCH', `/api/blueprints/${blueprintId}/shift`, { days: 2 }, headersUser2);
+  console.log('Status 404 on mismatched user:', isolShiftRes.status === 404 ? 'PASSED' : 'FAILED');
+
+  // TEST 17: Invalid shift parameters
+  console.log('\n[17] Testing Invalid Shift Parameters (0, negative, >30, non-integer)...');
+  const zeroRes = await request('PATCH', `/api/blueprints/${blueprintId}/shift`, { days: 0 }, headersUser1);
+  console.log('days = 0 rejected with 400:', zeroRes.status === 400 ? 'PASSED' : 'FAILED');
+
+  const negRes = await request('PATCH', `/api/blueprints/${blueprintId}/shift`, { days: -3 }, headersUser1);
+  console.log('days = -3 rejected with 400:', negRes.status === 400 ? 'PASSED' : 'FAILED');
+
+  const largeRes = await request('PATCH', `/api/blueprints/${blueprintId}/shift`, { days: 45 }, headersUser1);
+  console.log('days = 45 rejected with 400:', largeRes.status === 400 ? 'PASSED' : 'FAILED');
+
+  const strRes = await request('PATCH', `/api/blueprints/${blueprintId}/shift`, { days: 'invalid' }, headersUser1);
+  console.log('days = "invalid" rejected with 400:', strRes.status === 400 ? 'PASSED' : 'FAILED');
+
+  // TEST 18: Unauthenticated shift request
+  console.log('\n[18] Testing Unauthenticated Shift Request (Expect 401)...');
+  const unauthRes = await request('PATCH', `/api/blueprints/${blueprintId}/shift`, { days: 2 }, {});
+  console.log('Status 401 without auth token:', unauthRes.status === 401 ? 'PASSED' : 'FAILED');
+
+  console.log('\n=== ALL AI ROADMAP & WHOLE-ROADMAP SHIFT TESTS PASSED SUCCESSFULLY ===');
   server.close();
   process.exit(0);
 }

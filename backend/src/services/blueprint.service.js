@@ -353,5 +353,146 @@ const rescheduleBlueprintDay = async (userId, dayId, newDate) => {
   };
 };
 
-module.exports = { createBlueprint, getUserBlueprints, rescheduleBlueprintDay };
+/**
+ * Shifts all pending days in an active blueprint forward by an integer number of days.
+ * Completed and skipped days remain fixed in place.
+ * Executed in a single PostgreSQL transaction with row locks.
+ *
+ * @param {number} userId - Authenticated user ID (from req.user.id).
+ * @param {number} blueprintId - ID of the blueprint to shift.
+ * @param {number} daysToShift - Positive integer number of days to shift forward.
+ * @returns {Promise<Object>} Summary of shifted days and updated blueprint info.
+ */
+const shiftBlueprint = async (userId, blueprintId, daysToShift) => {
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Lock and verify blueprint ownership and active status
+    const { rows: bpRows } = await client.query(
+      `SELECT id, user_id, title, outcome, duration_days, start_date, end_date, status
+       FROM blueprints
+       WHERE id = $1 AND user_id = $2
+       FOR UPDATE`,
+      [blueprintId, userId]
+    );
+
+    if (bpRows.length === 0) {
+      const err = new Error('Roadmap blueprint not found or access denied.');
+      err.code = 'BLUEPRINT_NOT_FOUND';
+      throw err;
+    }
+
+    const blueprint = bpRows[0];
+    if (blueprint.status !== 'active') {
+      const err = new Error(`Only active roadmaps can be shifted. Current status: ${blueprint.status}`);
+      err.code = 'BLUEPRINT_NOT_ACTIVE';
+      throw err;
+    }
+
+    // 2. Fetch and lock all blueprint days for this roadmap
+    const { rows: allDayRows } = await client.query(
+      `SELECT id, blueprint_id, day_number, log_date::TEXT AS log_date, title, mission, rationale,
+              status, completed_at, original_log_date::TEXT AS original_log_date, rescheduled_at, created_at, updated_at
+       FROM blueprint_days
+       WHERE blueprint_id = $1
+       ORDER BY day_number ASC
+       FOR UPDATE`,
+      [blueprintId]
+    );
+
+    const pendingDays = allDayRows.filter((d) => d.status === 'pending');
+    const fixedDays = allDayRows.filter((d) => d.status !== 'pending');
+
+    if (pendingDays.length === 0) {
+      const err = new Error('There are no pending missions to shift in this roadmap.');
+      err.code = 'NO_PENDING_MISSIONS';
+      throw err;
+    }
+
+    // 3. Validate no collisions with fixed (completed/skipped) days
+    const fixedDatesSet = new Set(fixedDays.map((d) => d.log_date));
+    for (const pDay of pendingDays) {
+      const [y, m, d] = pDay.log_date.split('-').map(Number);
+      const targetDateObj = new Date(Date.UTC(y, m - 1, d + daysToShift));
+      const targetDateStr = targetDateObj.toISOString().split('T')[0];
+
+      if (fixedDatesSet.has(targetDateStr)) {
+        const conflictingDay = fixedDays.find((f) => f.log_date === targetDateStr);
+        const err = new Error(
+          `Cannot shift roadmap: Target date ${targetDateStr} for Day ${pDay.day_number} conflicts with completed/skipped Day ${conflictingDay?.day_number || ''}.`
+        );
+        err.code = 'DATE_OCCUPIED';
+        throw err;
+      }
+    }
+
+    // 4. Update all pending days by shifting log_date forward by daysToShift
+    // Use a two-step shift inside the transaction to avoid transient per-row unique constraint collisions
+    // Step A: move pending days to a far-future buffer
+    await client.query(
+      `UPDATE blueprint_days
+       SET log_date = (log_date + INTERVAL '500 years')::DATE
+       WHERE blueprint_id = $1 AND status = 'pending'`,
+      [blueprintId]
+    );
+
+    // Step B: move from buffer to final target dates (log_date - 500 years + daysToShift)
+    // IMPORTANT: Do NOT touch original_log_date or rescheduled_at (preserves history of individual reschedules)
+    const { rows: updatedDayRows } = await client.query(
+      `UPDATE blueprint_days
+       SET log_date = (log_date - INTERVAL '500 years' + ($1 || ' days')::INTERVAL)::DATE,
+           updated_at = NOW()
+       WHERE blueprint_id = $2 AND status = 'pending'
+       RETURNING id, blueprint_id, day_number, log_date::TEXT AS log_date, title, mission, rationale,
+                 status, completed_at, original_log_date, rescheduled_at, created_at, updated_at`,
+      [daysToShift, blueprintId]
+    );
+
+    // 5. Update the blueprint's end_date to match the maximum log_date among all days
+    const { rows: updatedBpRows } = await client.query(
+      `UPDATE blueprints
+       SET end_date = (SELECT MAX(log_date) FROM blueprint_days WHERE blueprint_id = $1),
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, user_id, title, outcome, duration_days, start_date, end_date, status, created_at, updated_at`,
+      [blueprintId]
+    );
+
+    await client.query('COMMIT');
+
+    const updatedBlueprint = updatedBpRows[0];
+
+    return {
+      blueprintId: Number(blueprint.id),
+      blueprintTitle: blueprint.title,
+      shiftedCount: updatedDayRows.length,
+      daysShifted: daysToShift,
+      newEndDate: updatedBlueprint.end_date,
+      days: updatedDayRows.map((d) => ({
+        id: Number(d.id),
+        blueprintId: Number(d.blueprint_id),
+        dayNumber: Number(d.day_number),
+        logDate: d.log_date,
+        title: d.title,
+        mission: d.mission,
+        rationale: d.rationale,
+        status: d.status,
+        completedAt: d.completed_at,
+        originalLogDate: d.original_log_date,
+        rescheduledAt: d.rescheduled_at,
+        createdAt: d.created_at,
+        updatedAt: d.updated_at,
+      })),
+    };
+  } catch (txErr) {
+    await client.query('ROLLBACK');
+    throw txErr;
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = { createBlueprint, getUserBlueprints, rescheduleBlueprintDay, shiftBlueprint };
+
 
