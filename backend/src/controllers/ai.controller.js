@@ -106,7 +106,7 @@ const aiChat = async (req, res, next) => {
     const userId = req.user.id;
 
     // ── Context pipeline ────────────────────────────────────────────────────
-    const dbContext = await buildDbContext(userId);
+    const dbContext = await buildDbContext(userId, trimmed);
     const fullContext = mergeHealthContext(dbContext, null);
     const selectedContext = selectRelevantContext(fullContext, trimmed);
 

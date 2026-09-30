@@ -37,19 +37,51 @@ const MAX_OUTPUT_TOKENS = 512;
 
 // ─── NOVA system instructions ────────────────────────────────────────────────
 const NOVA_SYSTEM_INSTRUCTIONS = `
-You are NOVA, an AI companion inside a personal focus, wellness, and roadmap app.
+You are NOVA, an AI companion and intelligence layer inside a personal health, focus, wellness, and roadmap app.
 
 Your role:
-- Help the user reflect on their focus sessions, wellness habits, and daily Roadmap missions.
-- Keep responses concise (2–4 sentences unless more is clearly needed).
-- Be conversational, calm, and non-judgmental.
-- Be honest about what you know and don't know about the user.
+- Answer questions about the user's authorized health, focus, wellness, and Roadmap data.
+- GENERATE practical, safe, personalized wellness and activity recommendations (e.g. yoga sequences, 10-15 minute workouts, mobility routines, no-equipment exercises, movement breaks, focus habits) using your general knowledge.
+- Personalize recommendations using the user's real NOVA context (activity levels, steps, energy, sleep, roadmap missions) whenever available.
+- Help the user reflect on their productivity, energy, and daily Roadmap missions.
+- Keep responses concise yet helpful (break down routines with clear timing or steps when requested).
+- Be conversational, calm, encouraging, and non-judgmental.
 
-Roadmap Action Rules (strict):
-- You can understand and assist with the user's active Roadmap missions.
+Internal Intent Categories (do not output category labels directly):
+- READ_DATA: Answering questions about recorded steps, exercise, focus, sleep, energy, or roadmap state.
+- ANALYZE_DATA: Analyzing trends, peak productivity times, or correlations between activity, sleep, and focus.
+- RECOMMEND: Generating practical exercise, yoga, mobility, routine, or focus suggestions.
+- ROADMAP_ACTION: Proposing mission rescheduling or whole-roadmap shifts.
+- OTHER: General conversation.
+
+Recommendation Rules (STRICT):
+- YOU ARE FULLY EQUIPPED to generate yoga routines, workouts, mobility sequences, stretching, and movement breaks.
+- Do NOT say "I don't have a database of routines", "I'm not equipped to design workouts", or "I can't prescribe routines" for normal exercise/wellness requests.
+- When asked for a routine (e.g., 10-minute workout, 15-minute yoga, mobility session, break activity), PROVIDE THE ACTUAL STEP-BY-STEP ROUTINE with time allocations or exercise breakdown.
+- Adapt the routine's intensity to available context:
+  * If reported energy or sleep is low, suggest lighter or restorative sessions.
+  * If recent activity is low, suggest beginner-friendly or gentle movement.
+  * If no relevant user data exists, provide a safe, general beginner routine.
+- If the user asks for a recommendation based on an un-tracked metric (e.g. heart rate, calories, weight), state that the metric is unavailable in NOVA, but STILL provide a safe general exercise recommendation based on available context.
+
+Data Honesty & Missing Data Rules (STRICT):
+- User recorded metrics (steps, sleep hours, energy rating, focus session count) come from the provided context preamble. Use ONLY real values from the context for user statistics.
+- If a user metric is missing/un-tracked (e.g., heart rate, calories, weight), state clearly that the specific metric is unavailable in NOVA.
+- Do NOT invent fake user metrics (e.g. do not invent heart rate bpm or sleep hours).
+- IMPORTANT: This honesty rule applies ONLY to recorded user data metrics, NOT to general exercise knowledge or routine creation. You are expected and encouraged to create general wellness routines freely!
+
+Safety Boundaries (STRICT):
+- Do NOT diagnose injuries or medical conditions.
+- Do NOT prescribe medical treatment or rehab for acute injuries.
+- Do NOT tell users to exercise through sharp or severe pain.
+- Include sensible wellness disclaimers when giving exercise routines (e.g. "Keep movements comfortable and stop if you feel pain or dizziness").
+- For medical/injury questions, recommend consulting a healthcare professional.
+
+Roadmap Rules (STRICT):
+- Roadmap Deletion: If asked to delete a Roadmap or blueprint, state clearly that Roadmap deletion is not currently supported in NOVA. Do NOT tell users to look for a non-existent Delete Roadmap button or UI option.
 - Two Structured Action Types:
   1. RESCHEDULE_ROADMAP_DAY (Single Mission Rescheduling):
-     - When the user explicitly requests to reschedule/move a single Roadmap mission (e.g. "Move today's mission to tomorrow", "Reschedule Day 3 to Friday", "Move mission 4 to 2026-10-01"):
+     - When the user explicitly requests to reschedule/move a single Roadmap mission:
        * Identify the specific pending mission from the user's active Roadmap context.
        * If the mission is completed or skipped, DO NOT propose rescheduling it. Explain why in your reply and set "action": null.
        * When the user asks to move to a SPECIFIC date (e.g. "tomorrow", "Friday", "2026-10-02"):
@@ -75,9 +107,8 @@ Roadmap Action Rules (strict):
          - In your reply, propose the change and ask the user to confirm below.
 
   2. SHIFT_ROADMAP (Whole / Remaining Roadmap Shift):
-     - When the user explicitly requests to push, shift, delay, or move the entire REMAINING active Roadmap forward by a number of days (e.g. "Push my whole Roadmap by 2 days", "Move my remaining Roadmap forward by 3 days", "Shift the rest of my schedule by 1 day", "Start my remaining Roadmap from tomorrow"):
+     - When the user explicitly requests to push, shift, delay, or move the entire REMAINING active Roadmap forward by a number of days:
        * Calculate dayCount as a positive integer (number of calendar days forward, between 1 and 30).
-       * If user says "start my remaining roadmap from tomorrow" or "start my roadmap from Friday", determine how many days forward from the current earliest pending mission that represents (e.g. if today is 2026-09-30 and the earliest pending mission is scheduled today, starting tomorrow means dayCount = 1).
        * If user has no active roadmap or no pending missions, state that and set "action": null.
        * Propose the action:
          {
@@ -85,24 +116,16 @@ Roadmap Action Rules (strict):
            "dayCount": <number>,
            "direction": "forward"
          }
-       * In your reply, propose the shift (e.g. "I can shift your remaining Roadmap forward by 2 days. This will move your pending missions. Please review the proposed changes below and confirm.") and explicitly ask the user to confirm via the confirmation button below.
+       * In your reply, propose the shift and explicitly ask the user to confirm via the confirmation button below.
        * NEVER claim or imply that the change has already occurred.
-       * Do not output individual date arrays; the backend calculates the resulting dates.
-     - If the user's request is vague (e.g. "change my whole schedule"), ask a clarifying question in your reply and set "action": null.
+     - For vague requests (e.g. "change my whole schedule"), ask a clarifying question in your reply and set "action": null.
      - Do not use SHIFT_ROADMAP for single-mission moves, mission swapping, or mission deletion.
 
 - Conversational reply wording rule (CRITICAL):
   * ONLY ask for confirmation (e.g., "Please confirm the reschedule below." or "Please review the proposed changes below and confirm.") when "action" is NOT null.
   * When "action" is null, NEVER ask for confirmation and NEVER say "Please confirm".
-  * NEVER claim or imply that the change has already occurred (e.g., do NOT say "I've rescheduled Day X", "Day X has been moved", or "The shift is complete").
-- If the user has no active Roadmap, state that and set "action": null.
-- For all other questions or general conversation, set "action": null.
-
-Data rules (strict):
-- You will receive a context object containing only the user's real, recorded data for this request. Use only what is in that context.
-- If a piece of data is absent from the context, say so honestly. Do NOT invent numbers, trends, or habits.
-- When discussing relationships between sleep, energy, or focus, use hedged language: "tends to", "appears associated with", "you might notice". Never say one thing "causes" another.
-- Do not provide medical diagnoses or clinical advice.
+  * NEVER claim or imply that the change has already occurred.
+- For all general questions, recommendations, or unavailable data queries, set "action": null.
 
 Output Format:
 You MUST ALWAYS respond with a valid raw JSON object matching:
@@ -398,6 +421,95 @@ const buildContextPreamble = (selectedContext = {}) => {
     contextLines.push(`Current date: ${currentDate}`);
   }
 
+  // Health Context
+  if (selectedContext.health) {
+    const h = selectedContext.health;
+    const parts = [];
+    if (h.todaySteps != null) parts.push(`Today's steps: ${h.todaySteps}`);
+    if (h.todayActiveExerciseMinutes != null) parts.push(`Today's active exercise: ${h.todayActiveExerciseMinutes} mins`);
+    if (h.todayExerciseDistanceMeters != null) parts.push(`Today's exercise distance: ${h.todayExerciseDistanceMeters} meters`);
+    if (h.totalSteps7d != null && Number(h.totalSteps7d) > 0) {
+      parts.push(`7-day steps total: ${h.totalSteps7d} (avg ${h.avgSteps7d}/day)`);
+    }
+    if (h.bestStepDay) {
+      parts.push(`Best step day: ${h.bestStepDay.date} (${h.bestStepDay.steps} steps)`);
+    }
+    if (h.totalExerciseMinutes7d != null && Number(h.totalExerciseMinutes7d) > 0) {
+      parts.push(`7-day active exercise total: ${h.totalExerciseMinutes7d} mins (avg ${h.avgExerciseMinutes7d || 0} mins/day)`);
+    }
+    if (h.totalExerciseDistanceMeters7d != null && Number(h.totalExerciseDistanceMeters7d) > 0) {
+      parts.push(`7-day total distance: ${h.totalExerciseDistanceMeters7d} meters`);
+    }
+    if (parts.length > 0) {
+      contextLines.push(`Health Summary: ${parts.join(' | ')}`);
+    }
+    contextLines.push(`Untracked Health Data Note: Heart rate, calories burned, weight, and sleep stages are NOT currently tracked/available in NOVA.`);
+  } else {
+    contextLines.push(`Health Summary: No health sync data available for the user.`);
+    contextLines.push(`Untracked Health Data Note: Heart rate, calories burned, weight, and steps/exercise are NOT currently tracked/available for this user in NOVA.`);
+  }
+
+  // Focus Context
+  if (selectedContext.focus) {
+    const f = selectedContext.focus;
+    const parts = [];
+    if (f.todayMinutes != null || f.todaySessions != null) {
+      parts.push(`Today: ${f.todayMinutes || 0} focus mins across ${f.todaySessions || 0} sessions (${f.todayCompleted || 0} completed)`);
+    }
+    if (f.totalSessionsLast7Days > 0) {
+      let f7 = `Last 7 days: ${f.totalSessionsLast7Days} total sessions (${f.completedLast7Days} completed`;
+      if (f.completionRatePercent != null) f7 += `, ${f.completionRatePercent}% completion rate`;
+      f7 += `), ${f.totalMinutesLast7Days} total focus mins`;
+      if (f.avgInterruptionsLast7Days != null) f7 += `, avg ${f.avgInterruptionsLast7Days} interruptions/session`;
+      parts.push(f7);
+    }
+    if (f.peakProductiveHourKolkata != null) {
+      const h12 = f.peakProductiveHourKolkata % 12 || 12;
+      const ampm = f.peakProductiveHourKolkata >= 12 ? 'PM' : 'AM';
+      parts.push(`Most productive time of day: around ${h12}:00 ${ampm} (Hour ${f.peakProductiveHourKolkata})`);
+    }
+    if (f.mostRecentSession) {
+      const m = f.mostRecentSession;
+      parts.push(`Most recent session: ${m.durationMinutes} mins (${m.completed ? 'completed' : 'incomplete'}), started at ${m.startedAt}, ${m.interruptions} interruptions`);
+    }
+    if (parts.length > 0) contextLines.push(`Focus Summary: ${parts.join(' | ')}`);
+  } else if (selectedContext.recentFocus) {
+    const rf = selectedContext.recentFocus;
+    contextLines.push(
+      `Recent focus (last 7 days): ${rf.totalSessionsLast7Days} sessions, ${rf.completedLast7Days} completed, ${rf.totalMinutesLast7Days} total minutes`
+    );
+  } else {
+    contextLines.push(`Focus Summary: No focus sessions recorded yet.`);
+  }
+
+  // Wellness Context
+  if (selectedContext.wellness) {
+    const w = selectedContext.wellness;
+    const parts = [];
+    if (w.todaySleepHours != null) parts.push(`Today's sleep: ${w.todaySleepHours} hours`);
+    if (w.todayEnergyLevel != null) parts.push(`Today's energy level: ${w.todayEnergyLevel}/10`);
+    if (w.avgSleepHours7d != null) parts.push(`7-day avg sleep: ${w.avgSleepHours7d} hours`);
+    if (w.avgEnergyLevel7d != null) parts.push(`7-day avg energy level: ${w.avgEnergyLevel7d}/10`);
+    if (parts.length > 0) contextLines.push(`Wellness Summary: ${parts.join(' | ')}`);
+  } else {
+    const parts = [];
+    if (selectedContext.todaySleepHours != null) parts.push(`Today's sleep: ${selectedContext.todaySleepHours} hours`);
+    if (selectedContext.todayEnergyLevel != null) parts.push(`Today's energy level: ${selectedContext.todayEnergyLevel}/10`);
+    if (parts.length > 0) {
+      contextLines.push(`Wellness Summary: ${parts.join(' | ')}`);
+    } else {
+      contextLines.push(`Wellness Summary: Sleep data isn't currently available or logged for this user.`);
+    }
+  }
+
+  // Detailed Health Records (if requested)
+  if (Array.isArray(selectedContext.detailedHealthRecords) && selectedContext.detailedHealthRecords.length > 0) {
+    const recs = selectedContext.detailedHealthRecords.map((r) =>
+      `${r.metricType} from ${r.source}: ${r.valueNumeric || 'N/A'} ${r.unit || ''} (${r.startTime} to ${r.endTime})`
+    );
+    contextLines.push(`Detailed Health Records:\n  ${recs.join('\n  ')}`);
+  }
+
   // Roadmap Context
   if (selectedContext.roadmap) {
     const rm = selectedContext.roadmap;
@@ -431,70 +543,11 @@ const buildContextPreamble = (selectedContext = {}) => {
     contextLines.push(`Active Roadmap: None.`);
   }
 
-  // Wellness
-  if (selectedContext.wellness) {
-    const w = selectedContext.wellness;
-    const parts = [];
-    if (w.todaySleepHours != null) parts.push(`Today's sleep: ${w.todaySleepHours} hours`);
-    if (w.todayEnergyLevel != null) parts.push(`Today's energy level: ${w.todayEnergyLevel}/10`);
-    if (w.avgSleepHours7d != null) parts.push(`7-day avg sleep: ${w.avgSleepHours7d} hours`);
-    if (w.avgEnergyLevel7d != null) parts.push(`7-day avg energy level: ${w.avgEnergyLevel7d}/10`);
-    if (parts.length > 0) contextLines.push(`Wellness: ${parts.join(' | ')}`);
-  } else {
-    if (selectedContext.todaySleepHours != null) {
-      contextLines.push(`Today's sleep: ${selectedContext.todaySleepHours} hours`);
-    }
-    if (selectedContext.todayEnergyLevel != null) {
-      contextLines.push(`Today's energy level: ${selectedContext.todayEnergyLevel}/10`);
-    }
-  }
-
-  // Focus
-  if (selectedContext.focus) {
-    const f = selectedContext.focus;
-    const parts = [];
-    if (f.todayMinutes != null || f.todaySessions != null) {
-      parts.push(`Today: ${f.todayMinutes || 0} total mins across ${f.todaySessions || 0} sessions (${f.todayCompleted || 0} completed)`);
-    }
-    if (f.totalSessionsLast7Days > 0) {
-      let f7 = `Last 7 days: ${f.totalSessionsLast7Days} sessions (${f.completedLast7Days} completed`;
-      if (f.completionRatePercent != null) f7 += `, ${f.completionRatePercent}% completion rate`;
-      f7 += `), ${f.totalMinutesLast7Days} total mins`;
-      if (f.avgInterruptionsLast7Days != null) f7 += `, avg ${f.avgInterruptionsLast7Days} interruptions/session`;
-      parts.push(f7);
-    }
-    if (f.mostRecentSession) {
-      const m = f.mostRecentSession;
-      parts.push(`Most recent session: ${m.durationMinutes} mins (${m.completed ? 'completed' : 'incomplete'}), started at ${m.startedAt}, ${m.interruptions} interruptions`);
-    }
-    if (parts.length > 0) contextLines.push(`Focus: ${parts.join(' | ')}`);
-  } else if (selectedContext.recentFocus) {
-    const rf = selectedContext.recentFocus;
-    contextLines.push(
-      `Recent focus (last 7 days): ${rf.totalSessionsLast7Days} sessions, ${rf.completedLast7Days} completed, ${rf.totalMinutesLast7Days} total minutes`
-    );
-  }
-
-  // Health
-  if (selectedContext.health) {
-    const h = selectedContext.health;
-    const parts = [];
-    if (h.todaySteps != null) parts.push(`Today's steps: ${h.todaySteps}`);
-    if (h.todayActiveExerciseMinutes != null) parts.push(`Today's exercise: ${h.todayActiveExerciseMinutes} mins`);
-    if (h.todayExerciseDistanceMeters != null) parts.push(`Today's distance: ${h.todayExerciseDistanceMeters} meters`);
-    if (h.totalSteps7d != null && Number(h.totalSteps7d) > 0) {
-      parts.push(`7-day steps total: ${h.totalSteps7d} (avg ${h.avgSteps7d}/day)`);
-    }
-    if (h.totalExerciseMinutes7d != null && Number(h.totalExerciseMinutes7d) > 0) {
-      parts.push(`7-day exercise total: ${h.totalExerciseMinutes7d} mins`);
-    }
-    if (parts.length > 0) contextLines.push(`Health: ${parts.join(' | ')}`);
-  }
-
   return contextLines.length > 0
     ? `[User context]\n${contextLines.join('\n')}\n\n[User message]\n`
     : '[No user context available for this request]\n\n[User message]\n';
 };
+
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 

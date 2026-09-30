@@ -1,379 +1,629 @@
 // =============================================================================
-// src/services/aiContext.service.js — AI Context Builder
+// src/services/aiContext.service.js — AI Data Access & Context Layer
 // =============================================================================
 //
-// This module is the single source of truth for what user data is sent to Gemini.
-// Phase 1 implementation aggregates holistic personal context from PostgreSQL:
-//   • User profile (name)
-//   • Focus session statistics (today & 7-day summaries, completion rate, interruptions, most recent session)
-//   • Wellness check-ins (today & 7-day averages for sleep and energy)
-//   • Health daily aggregates (today & 7-day step, exercise, and distance totals)
-//   • Temporal context (current database date)
+// Single source of truth for querying authorized user data for AI intelligence:
+//   • User Profile: getUserProfile(userId)
+//   • Health Summary & History: getHealthSummary(userId, days), getHealthHistory(userId, days), getDetailedHealthRecords(userId, metricType, limit)
+//   • Focus Summary & History: getFocusSummary(userId, days), getFocusHistory(userId, days)
+//   • Wellness Summary & History: getWellnessSummary(userId, days), getWellnessHistory(userId, days)
+//   • Roadmap Active & History: getActiveRoadmap(userId), getRoadmapHistory(userId)
 //
-// All queries remain strictly scoped to the authenticated user ID (`userId`).
-// No credential fields, raw telemetry JSON payloads, or fake data are used.
+// Security Rules:
+//   • Every function receives explicit, authenticated `userId` and uses parameterized queries.
+//   • No arbitrary `userId` selection allowed by model or client.
+//   • No API keys, passwords, credentials, or raw telemetry tokens exposed.
 // =============================================================================
 
 'use strict';
 
 const db = require('../config/db');
 
-// The lookback window for recent metrics (7 days preceding and including today).
-const RECENT_DAYS = 7;
+const DEFAULT_DAYS = 7;
 
 /**
- * Queries PostgreSQL for the user's current data and returns a structured
- * personal context object containing only fields that actually exist in the DB.
+ * Retrieves user profile information (non-sensitive).
  *
- * Scoped strictly to `userId`. Missing values (NULL, no rows) are omitted or
- * represented as absent/null rather than fabricated.
- *
- * @param {number} userId - The authenticated PostgreSQL user ID (from req.user.id).
- * @returns {Promise<Object>} Personal context object.
+ * @param {number} userId
+ * @returns {Promise<Object|null>}
  */
-const buildDbContext = async (userId) => {
-  const [
-    userResult,
-    todayWellnessResult,
-    wellness7dResult,
-    todayFocusResult,
-    focus7dResult,
-    recentFocusSessionResult,
-    todayHealthResult,
-    health7dResult,
-    currentDateResult,
-    activeRoadmapResult,
-  ] = await Promise.all([
-    // Q1: User name (select only name, omit email/google_id/timestamps)
+const getUserProfile = async (userId) => {
+  const res = await db.query(
+    'SELECT id, name, created_at FROM users WHERE id = $1 LIMIT 1',
+    [userId]
+  );
+  const row = res.rows[0];
+  if (!row) return null;
+  return {
+    id: Number(row.id),
+    name: row.name,
+    createdAt: row.created_at,
+  };
+};
+
+/**
+ * Retrieves daily aggregated health metrics summary (steps, exercise, distance, best step day).
+ *
+ * @param {number} userId
+ * @param {number} days
+ * @returns {Promise<Object>}
+ */
+const getHealthSummary = async (userId, days = DEFAULT_DAYS) => {
+  const [todayRes, summaryRes, bestStepRes] = await Promise.all([
     db.query(
-      'SELECT name FROM users WHERE id = $1 LIMIT 1',
+      `SELECT total_steps, active_exercise_minutes, exercise_distance_meters
+       FROM health_daily_aggregates
+       WHERE user_id = $1 AND log_date = CURRENT_DATE
+       LIMIT 1`,
       [userId]
     ),
-
-    // Q2: Today's wellness check-in
     db.query(
-      `SELECT sleep_hours, energy_level
-       FROM   wellness_logs
-       WHERE  user_id  = $1
-         AND  log_date = CURRENT_DATE
-       LIMIT  1`,
-      [userId]
+      `SELECT COALESCE(SUM(total_steps), 0)::BIGINT                      AS total_steps_7d,
+              COALESCE(AVG(total_steps), 0)::NUMERIC(10,0)               AS avg_steps_7d,
+              COALESCE(SUM(active_exercise_minutes), 0)::NUMERIC(10,1)  AS total_exercise_minutes_7d,
+              COALESCE(AVG(active_exercise_minutes), 0)::NUMERIC(10,1)  AS avg_exercise_minutes_7d,
+              COALESCE(SUM(exercise_distance_meters), 0)::NUMERIC(12,1) AS total_exercise_distance_7d,
+              COUNT(*)::INTEGER                                         AS tracked_days
+       FROM health_daily_aggregates
+       WHERE user_id = $1 AND log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
+      [userId, days]
     ),
-
-    // Q3: 7-day average wellness
     db.query(
-      `SELECT AVG(sleep_hours)::NUMERIC(4,1)  AS avg_sleep,
-              AVG(energy_level)::NUMERIC(4,1) AS avg_energy
-       FROM   wellness_logs
-       WHERE  user_id  = $1
-         AND  log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
-      [userId, RECENT_DAYS]
+      `SELECT log_date::TEXT AS log_date, total_steps
+       FROM health_daily_aggregates
+       WHERE user_id = $1 AND log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL
+       ORDER BY total_steps DESC, log_date DESC
+       LIMIT 1`,
+      [userId, days]
     ),
+  ]);
 
-    // Q4: Today's focus sessions
+  const today = todayRes.rows[0];
+  const summary = summaryRes.rows[0];
+  const bestStepRow = bestStepRes.rows[0];
+
+  const obj = {};
+
+  if (today) {
+    if (today.total_steps != null) obj.todaySteps = Number(today.total_steps);
+    if (today.active_exercise_minutes != null) obj.todayActiveExerciseMinutes = Number(today.active_exercise_minutes);
+    if (today.exercise_distance_meters != null) obj.todayExerciseDistanceMeters = Number(today.exercise_distance_meters);
+  }
+
+  if (summary) {
+    const totalSteps7d = Number(summary.total_steps_7d) || 0;
+    if (totalSteps7d > 0) {
+      obj.totalSteps7d = totalSteps7d;
+      obj.avgSteps7d = Number(summary.avg_steps_7d) || 0;
+    }
+    const totalExMin = Number(summary.total_exercise_minutes_7d) || 0;
+    if (totalExMin > 0) {
+      obj.totalExerciseMinutes7d = totalExMin;
+      obj.avgExerciseMinutes7d = Number(summary.avg_exercise_minutes_7d) || 0;
+    }
+    const totalDist = Number(summary.total_exercise_distance_7d) || 0;
+    if (totalDist > 0) {
+      obj.totalExerciseDistanceMeters7d = totalDist;
+    }
+    obj.trackedDays = Number(summary.tracked_days) || 0;
+  }
+
+  if (bestStepRow && Number(bestStepRow.total_steps) > 0) {
+    obj.bestStepDay = {
+      date: bestStepRow.log_date,
+      steps: Number(bestStepRow.total_steps),
+    };
+  }
+
+  return obj;
+};
+
+/**
+ * Retrieves daily aggregated health history breakdown.
+ *
+ * @param {number} userId
+ * @param {number} days
+ * @returns {Promise<Array<Object>>}
+ */
+const getHealthHistory = async (userId, days = DEFAULT_DAYS) => {
+  const res = await db.query(
+    `SELECT log_date::TEXT AS log_date, total_steps, active_exercise_minutes, exercise_distance_meters
+     FROM health_daily_aggregates
+     WHERE user_id = $1 AND log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL
+     ORDER BY log_date DESC`,
+    [userId, days]
+  );
+  return res.rows.map((r) => ({
+    date: r.log_date,
+    steps: Number(r.total_steps),
+    activeExerciseMinutes: Number(r.active_exercise_minutes),
+    exerciseDistanceMeters: Number(r.exercise_distance_meters),
+  }));
+};
+
+/**
+ * Retrieves detailed health records (e.g. granular exercise sessions or specific metrics)
+ * strictly scoped to `userId` and limited to avoid unnecessary payload dumps.
+ *
+ * @param {number} userId
+ * @param {string|null} metricType
+ * @param {number} limit
+ * @returns {Promise<Array<Object>>}
+ */
+const getDetailedHealthRecords = async (userId, metricType = null, limit = 10) => {
+  let query = `SELECT metric_type, source, start_time, end_time, value_numeric, unit
+               FROM health_records
+               WHERE user_id = $1`;
+  const params = [userId];
+
+  if (metricType) {
+    params.push(metricType);
+    query += ` AND metric_type = $2`;
+  }
+
+  query += ` ORDER BY start_time DESC LIMIT $${params.length + 1}`;
+  params.push(limit);
+
+  const res = await db.query(query, params);
+  return res.rows.map((r) => ({
+    metricType: r.metric_type,
+    source: r.source,
+    startTime: r.start_time,
+    endTime: r.end_time,
+    valueNumeric: r.value_numeric != null ? Number(r.value_numeric) : null,
+    unit: r.unit,
+  }));
+};
+
+/**
+ * Retrieves focus sessions summary (today's counts/minutes, 7-day stats, peak focus time, recent session).
+ *
+ * @param {number} userId
+ * @param {number} days
+ * @returns {Promise<Object>}
+ */
+const getFocusSummary = async (userId, days = DEFAULT_DAYS) => {
+  const [todayRes, summaryRes, recentRes, peakHourRes] = await Promise.all([
     db.query(
       `SELECT COUNT(*)::INTEGER                                  AS today_sessions,
               COUNT(*) FILTER (WHERE completed = TRUE)::INTEGER  AS today_completed,
               COALESCE(SUM(duration_minutes), 0)::INTEGER        AS today_minutes
-       FROM   focus_sessions
-       WHERE  user_id    = $1
-         AND  started_at >= CURRENT_DATE`,
+       FROM focus_sessions
+       WHERE user_id = $1 AND started_at >= CURRENT_DATE`,
       [userId]
     ),
-
-    // Q5: Last 7 days focus sessions summary
     db.query(
       `SELECT COUNT(*)::INTEGER                                  AS total_sessions,
               COUNT(*) FILTER (WHERE completed = TRUE)::INTEGER  AS completed_sessions,
               COALESCE(SUM(duration_minutes), 0)::INTEGER        AS total_minutes,
               COALESCE(AVG(interruptions), 0)::NUMERIC(4,1)     AS avg_interruptions
-       FROM   focus_sessions
-       WHERE  user_id    = $1
-         AND  started_at >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
-      [userId, RECENT_DAYS]
+       FROM focus_sessions
+       WHERE user_id = $1 AND started_at >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
+      [userId, days]
     ),
-
-    // Q6: Most recent focus session
     db.query(
       `SELECT duration_minutes, interruptions, started_at, completed
-       FROM   focus_sessions
-       WHERE  user_id = $1
-       ORDER  BY started_at DESC
-       LIMIT  1`,
-      [userId]
-    ),
-
-    // Q7: Today's health daily aggregate
-    db.query(
-      `SELECT total_steps, active_exercise_minutes, exercise_distance_meters
-       FROM   health_daily_aggregates
-       WHERE  user_id  = $1
-         AND  log_date = CURRENT_DATE
-       LIMIT  1`,
-      [userId]
-    ),
-
-    // Q8: Last 7 days health summary from health_daily_aggregates
-    db.query(
-      `SELECT COALESCE(SUM(total_steps), 0)::BIGINT                      AS total_steps_7d,
-              COALESCE(AVG(total_steps), 0)::NUMERIC(10,0)               AS avg_steps_7d,
-              COALESCE(SUM(active_exercise_minutes), 0)::NUMERIC(10,1)  AS total_exercise_minutes_7d,
-              COALESCE(SUM(exercise_distance_meters), 0)::NUMERIC(12,1) AS total_exercise_distance_7d
-       FROM   health_daily_aggregates
-       WHERE  user_id  = $1
-         AND  log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
-      [userId, RECENT_DAYS]
-    ),
-
-    // Q9: Current database date
-    db.query(`SELECT CURRENT_DATE::TEXT AS current_date`),
-
-    // Q10: Active Roadmap for user
-    db.query(
-      `SELECT id, title, outcome, duration_days, start_date::TEXT AS start_date,
-              end_date::TEXT AS end_date, status
-       FROM blueprints
-       WHERE user_id = $1 AND status = 'active'
-       ORDER BY created_at DESC
+       FROM focus_sessions
+       WHERE user_id = $1
+       ORDER BY started_at DESC
        LIMIT 1`,
       [userId]
     ),
+    db.query(
+      `SELECT EXTRACT(HOUR FROM started_at AT TIME ZONE 'Asia/Kolkata')::INTEGER AS peak_hour,
+              COUNT(*)::INTEGER AS session_count
+       FROM focus_sessions
+       WHERE user_id = $1 AND completed = TRUE AND started_at >= CURRENT_DATE - ($2 || ' days')::INTERVAL
+       GROUP BY peak_hour
+       ORDER BY session_count DESC
+       LIMIT 1`,
+      [userId, days]
+    ),
   ]);
 
-  const context = {};
+  const today = todayRes.rows[0];
+  const summary = summaryRes.rows[0];
+  const recent = recentRes.rows[0];
+  const peakHourRow = peakHourRes.rows[0];
 
-  // 1. User
-  const userRow = userResult.rows[0];
-  if (userRow && userRow.name) {
-    context.userName = userRow.name;
-    context.user = { name: userRow.name };
+  const obj = {};
+
+  if (today) {
+    obj.todayMinutes = Number(today.today_minutes) || 0;
+    obj.todaySessions = Number(today.today_sessions) || 0;
+    obj.todayCompleted = Number(today.today_completed) || 0;
   }
 
-  // 2. Temporal context
-  const currentDate = currentDateResult.rows[0]?.current_date;
-  if (currentDate) {
-    context.currentDate = currentDate;
-    context.temporalContext = { currentDate };
-  }
-
-  // 3. Roadmap context
-  const activeBpRow = activeRoadmapResult?.rows[0];
-  if (activeBpRow) {
-    const { rows: bpDayRows } = await db.query(
-      `SELECT id, blueprint_id, day_number, log_date::TEXT AS log_date, title, mission, rationale,
-              status, completed_at, original_log_date::TEXT AS original_log_date, rescheduled_at
-       FROM blueprint_days
-       WHERE blueprint_id = $1
-       ORDER BY day_number ASC`,
-      [activeBpRow.id]
-    );
-
-    const days = bpDayRows.map((d) => ({
-      id: Number(d.id),
-      dayNumber: Number(d.day_number),
-      date: d.log_date,
-      title: d.title,
-      mission: d.mission,
-      rationale: d.rationale,
-      status: d.status,
-      originalDate: d.original_log_date || null,
-      rescheduledAt: d.rescheduled_at || null,
-    }));
-
-    const todayMission = days.find((d) => d.date === currentDate) || null;
-    const pendingDays = days.filter((d) => d.status === 'pending');
-    const completedDays = days.filter((d) => d.status === 'completed');
-    const skippedDays = days.filter((d) => d.status === 'skipped');
-    const rescheduledDays = days.filter((d) => d.originalDate && d.originalDate !== d.date);
-
-    const occupiedDates = Array.from(new Set(days.map((d) => d.date))).sort();
-    
-    // Helper to calculate earliest unoccupied dates after current date
-    const earliestAvailableDates = [];
-    if (currentDate) {
-      const occupiedSet = new Set(occupiedDates);
-      let offset = 1;
-      while (earliestAvailableDates.length < 5 && offset <= 365) {
-        const [y, m, d] = currentDate.split('-').map(Number);
-        const candDate = new Date(Date.UTC(y, m - 1, d + offset));
-        const candStr = candDate.toISOString().split('T')[0];
-        if (!occupiedSet.has(candStr)) {
-          earliestAvailableDates.push(candStr);
-        }
-        offset++;
-      }
-    }
-
-    context.roadmap = {
-      id: Number(activeBpRow.id),
-      title: activeBpRow.title,
-      outcome: activeBpRow.outcome,
-      durationDays: Number(activeBpRow.duration_days),
-      startDate: activeBpRow.start_date,
-      endDate: activeBpRow.end_date,
-      currentDate: currentDate || null,
-      todayMission: todayMission
-        ? {
-            id: todayMission.id,
-            dayNumber: todayMission.dayNumber,
-            title: todayMission.title,
-            mission: todayMission.mission,
-            status: todayMission.status,
-            date: todayMission.date,
-          }
-        : null,
-      totalMissions: days.length,
-      pendingCount: pendingDays.length,
-      completedCount: completedDays.length,
-      skippedCount: skippedDays.length,
-      rescheduledCount: rescheduledDays.length,
-      occupiedDates,
-      earliestAvailableDates,
-      days,
-    };
-  }
-
-  // 4. Wellness
-  const wellnessRow = todayWellnessResult.rows[0];
-  const wellness7dRow = wellness7dResult.rows[0];
-  const wellnessObj = {};
-
-  if (wellnessRow) {
-    if (wellnessRow.sleep_hours != null) {
-      wellnessObj.todaySleepHours = Number(wellnessRow.sleep_hours);
-      context.todaySleepHours = Number(wellnessRow.sleep_hours);
-    }
-    if (wellnessRow.energy_level != null) {
-      wellnessObj.todayEnergyLevel = Number(wellnessRow.energy_level);
-      context.todayEnergyLevel = Number(wellnessRow.energy_level);
-    }
-  }
-
-  if (wellness7dRow) {
-    if (wellness7dRow.avg_sleep != null) {
-      wellnessObj.avgSleepHours7d = Number(wellness7dRow.avg_sleep);
-    }
-    if (wellness7dRow.avg_energy != null) {
-      wellnessObj.avgEnergyLevel7d = Number(wellness7dRow.avg_energy);
-    }
-  }
-
-  if (Object.keys(wellnessObj).length > 0) {
-    context.wellness = wellnessObj;
-  }
-
-  // 4. Focus
-  const todayFocusRow = todayFocusResult.rows[0];
-  const focus7dRow = focus7dResult.rows[0];
-  const mostRecentSessionRow = recentFocusSessionResult.rows[0];
-  const focusObj = {};
-
-  if (todayFocusRow) {
-    focusObj.todayMinutes = Number(todayFocusRow.today_minutes) || 0;
-    focusObj.todaySessions = Number(todayFocusRow.today_sessions) || 0;
-    focusObj.todayCompleted = Number(todayFocusRow.today_completed) || 0;
-  }
-
-  const totalSessions7d = Number(focus7dRow?.total_sessions) || 0;
+  const totalSessions7d = Number(summary?.total_sessions) || 0;
   if (totalSessions7d > 0) {
-    const completed7d = Number(focus7dRow.completed_sessions) || 0;
-    focusObj.totalSessionsLast7Days = totalSessions7d;
-    focusObj.completedLast7Days = completed7d;
-    focusObj.totalMinutesLast7Days = Number(focus7dRow.total_minutes) || 0;
-    focusObj.completionRatePercent = Number(((completed7d / totalSessions7d) * 100).toFixed(1));
-    focusObj.avgInterruptionsLast7Days = Number(focus7dRow.avg_interruptions) || 0;
+    const completed7d = Number(summary.completed_sessions) || 0;
+    obj.totalSessionsLast7Days = totalSessions7d;
+    obj.completedLast7Days = completed7d;
+    obj.totalMinutesLast7Days = Number(summary.total_minutes) || 0;
+    obj.completionRatePercent = Number(((completed7d / totalSessions7d) * 100).toFixed(1));
+    obj.avgInterruptionsLast7Days = Number(summary.avg_interruptions) || 0;
+  }
 
-    // Backward-compatibility key
-    context.recentFocus = {
-      totalSessionsLast7Days: focusObj.totalSessionsLast7Days,
-      completedLast7Days: focusObj.completedLast7Days,
-      totalMinutesLast7Days: focusObj.totalMinutesLast7Days,
+  if (peakHourRow) {
+    obj.peakProductiveHourKolkata = Number(peakHourRow.peak_hour);
+  }
+
+  if (recent) {
+    obj.mostRecentSession = {
+      durationMinutes: Number(recent.duration_minutes),
+      interruptions: Number(recent.interruptions),
+      startedAt: recent.started_at,
+      completed: Boolean(recent.completed),
     };
   }
 
-  if (mostRecentSessionRow) {
-    focusObj.mostRecentSession = {
-      durationMinutes: Number(mostRecentSessionRow.duration_minutes),
-      interruptions: Number(mostRecentSessionRow.interruptions),
-      startedAt: mostRecentSessionRow.started_at,
-      completed: Boolean(mostRecentSessionRow.completed),
-    };
+  return obj;
+};
+
+/**
+ * Retrieves list of recent focus sessions.
+ *
+ * @param {number} userId
+ * @param {number} days
+ * @returns {Promise<Array<Object>>}
+ */
+const getFocusHistory = async (userId, days = DEFAULT_DAYS) => {
+  const res = await db.query(
+    `SELECT duration_minutes, interruptions, started_at, completed
+     FROM focus_sessions
+     WHERE user_id = $1 AND started_at >= CURRENT_DATE - ($2 || ' days')::INTERVAL
+     ORDER BY started_at DESC`,
+    [userId, days]
+  );
+  return res.rows.map((r) => ({
+    durationMinutes: Number(r.duration_minutes),
+    interruptions: Number(r.interruptions),
+    startedAt: r.started_at,
+    completed: Boolean(r.completed),
+  }));
+};
+
+/**
+ * Retrieves wellness summary (today & 7-day sleep/energy averages).
+ *
+ * @param {number} userId
+ * @param {number} days
+ * @returns {Promise<Object>}
+ */
+const getWellnessSummary = async (userId, days = DEFAULT_DAYS) => {
+  const [todayRes, summaryRes] = await Promise.all([
+    db.query(
+      `SELECT sleep_hours, energy_level
+       FROM wellness_logs
+       WHERE user_id = $1 AND log_date = CURRENT_DATE
+       LIMIT 1`,
+      [userId]
+    ),
+    db.query(
+      `SELECT AVG(sleep_hours)::NUMERIC(4,1)  AS avg_sleep,
+              AVG(energy_level)::NUMERIC(4,1) AS avg_energy,
+              COUNT(*)::INTEGER              AS log_count
+       FROM wellness_logs
+       WHERE user_id = $1 AND log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL`,
+      [userId, days]
+    ),
+  ]);
+
+  const today = todayRes.rows[0];
+  const summary = summaryRes.rows[0];
+
+  const obj = {};
+
+  if (today) {
+    if (today.sleep_hours != null) obj.todaySleepHours = Number(today.sleep_hours);
+    if (today.energy_level != null) obj.todayEnergyLevel = Number(today.energy_level);
   }
 
-  if (Object.keys(focusObj).length > 0) {
-    context.focus = focusObj;
+  if (summary) {
+    if (summary.avg_sleep != null) obj.avgSleepHours7d = Number(summary.avg_sleep);
+    if (summary.avg_energy != null) obj.avgEnergyLevel7d = Number(summary.avg_energy);
+    obj.logCount7d = Number(summary.log_count) || 0;
   }
 
-  // 5. Health
-  const todayHealthRow = todayHealthResult.rows[0];
-  const health7dRow = health7dResult.rows[0];
-  const healthObj = {};
+  return obj;
+};
 
-  if (todayHealthRow) {
-    if (todayHealthRow.total_steps != null) {
-      healthObj.todaySteps = Number(todayHealthRow.total_steps);
-    }
-    if (todayHealthRow.active_exercise_minutes != null) {
-      healthObj.todayActiveExerciseMinutes = Number(todayHealthRow.active_exercise_minutes);
-    }
-    if (todayHealthRow.exercise_distance_meters != null) {
-      healthObj.todayExerciseDistanceMeters = Number(todayHealthRow.exercise_distance_meters);
+/**
+ * Retrieves recent daily wellness logs breakdown.
+ *
+ * @param {number} userId
+ * @param {number} days
+ * @returns {Promise<Array<Object>>}
+ */
+const getWellnessHistory = async (userId, days = DEFAULT_DAYS) => {
+  const res = await db.query(
+    `SELECT log_date::TEXT AS log_date, sleep_hours, energy_level
+     FROM wellness_logs
+     WHERE user_id = $1 AND log_date >= CURRENT_DATE - ($2 || ' days')::INTERVAL
+     ORDER BY log_date DESC`,
+    [userId, days]
+  );
+  return res.rows.map((r) => ({
+    date: r.log_date,
+    sleepHours: r.sleep_hours != null ? Number(r.sleep_hours) : null,
+    energyLevel: r.energy_level != null ? Number(r.energy_level) : null,
+  }));
+};
+
+/**
+ * Retrieves the currently active Roadmap and all its daily missions for `userId`.
+ *
+ * @param {number} userId
+ * @returns {Promise<Object|null>}
+ */
+const getActiveRoadmap = async (userId) => {
+  const bpRes = await db.query(
+    `SELECT id, title, outcome, duration_days, start_date::TEXT AS start_date,
+            end_date::TEXT AS end_date, status
+     FROM blueprints
+     WHERE user_id = $1 AND status = 'active'
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId]
+  );
+
+  const activeBpRow = bpRes.rows[0];
+  if (!activeBpRow) return null;
+
+  const currentDateRes = await db.query(`SELECT CURRENT_DATE::TEXT AS current_date`);
+  const currentDate = currentDateRes.rows[0]?.current_date;
+
+  const { rows: bpDayRows } = await db.query(
+    `SELECT id, blueprint_id, day_number, log_date::TEXT AS log_date, title, mission, rationale,
+            status, completed_at, original_log_date::TEXT AS original_log_date, rescheduled_at
+     FROM blueprint_days
+     WHERE blueprint_id = $1
+     ORDER BY day_number ASC`,
+    [activeBpRow.id]
+  );
+
+  const days = bpDayRows.map((d) => ({
+    id: Number(d.id),
+    dayNumber: Number(d.day_number),
+    date: d.log_date,
+    title: d.title,
+    mission: d.mission,
+    rationale: d.rationale,
+    status: d.status,
+    originalDate: d.original_log_date || null,
+    rescheduledAt: d.rescheduled_at || null,
+  }));
+
+  const todayMission = days.find((d) => d.date === currentDate) || null;
+  const pendingDays = days.filter((d) => d.status === 'pending');
+  const completedDays = days.filter((d) => d.status === 'completed');
+  const skippedDays = days.filter((d) => d.status === 'skipped');
+  const rescheduledDays = days.filter((d) => d.originalDate && d.originalDate !== d.date);
+
+  const occupiedDates = Array.from(new Set(days.map((d) => d.date))).sort();
+
+  const earliestAvailableDates = [];
+  if (currentDate) {
+    const occupiedSet = new Set(occupiedDates);
+    let offset = 1;
+    while (earliestAvailableDates.length < 5 && offset <= 365) {
+      const [y, m, d] = currentDate.split('-').map(Number);
+      const candDate = new Date(Date.UTC(y, m - 1, d + offset));
+      const candStr = candDate.toISOString().split('T')[0];
+      if (!occupiedSet.has(candStr)) {
+        earliestAvailableDates.push(candStr);
+      }
+      offset++;
     }
   }
 
-  if (health7dRow) {
-    const totalSteps7d = Number(health7dRow.total_steps_7d) || 0;
-    if (totalSteps7d > 0) {
-      healthObj.totalSteps7d = totalSteps7d;
-      healthObj.avgSteps7d = Number(health7dRow.avg_steps_7d) || 0;
-    }
-    const totalExerciseMin = Number(health7dRow.total_exercise_minutes_7d) || 0;
-    if (totalExerciseMin > 0) {
-      healthObj.totalExerciseMinutes7d = totalExerciseMin;
-    }
-    const totalDist = Number(health7dRow.total_exercise_distance_7d) || 0;
-    if (totalDist > 0) {
-      healthObj.totalExerciseDistanceMeters7d = totalDist;
-    }
+  return {
+    id: Number(activeBpRow.id),
+    title: activeBpRow.title,
+    outcome: activeBpRow.outcome,
+    durationDays: Number(activeBpRow.duration_days),
+    startDate: activeBpRow.start_date,
+    endDate: activeBpRow.end_date,
+    status: activeBpRow.status,
+    currentDate: currentDate || null,
+    todayMission: todayMission
+      ? {
+          id: todayMission.id,
+          dayNumber: todayMission.dayNumber,
+          title: todayMission.title,
+          mission: todayMission.mission,
+          status: todayMission.status,
+          date: todayMission.date,
+        }
+      : null,
+    totalMissions: days.length,
+    pendingCount: pendingDays.length,
+    completedCount: completedDays.length,
+    skippedCount: skippedDays.length,
+    rescheduledCount: rescheduledDays.length,
+    occupiedDates,
+    earliestAvailableDates,
+    days,
+  };
+};
+
+/**
+ * Retrieves past blueprint roadmaps for `userId`.
+ *
+ * @param {number} userId
+ * @param {number} limit
+ * @returns {Promise<Array<Object>>}
+ */
+const getRoadmapHistory = async (userId, limit = 5) => {
+  const res = await db.query(
+    `SELECT id, title, outcome, duration_days, start_date::TEXT AS start_date,
+            end_date::TEXT AS end_date, status, created_at
+     FROM blueprints
+     WHERE user_id = $1
+     ORDER BY created_at DESC
+     LIMIT $2`,
+    [userId, limit]
+  );
+
+  return res.rows.map((r) => ({
+    id: Number(r.id),
+    title: r.title,
+    outcome: r.outcome,
+    durationDays: Number(r.duration_days),
+    startDate: r.start_date,
+    endDate: r.end_date,
+    status: r.status,
+    createdAt: r.created_at,
+  }));
+};
+
+/**
+ * Determines internal intent category & target data domains for context routing.
+ * Categories: READ_DATA, ANALYZE_DATA, RECOMMEND, ROADMAP_ACTION, OTHER
+ *
+ * @param {string} userMessage
+ * @returns {{ category: string, domains: Array<string> }}
+ */
+const detectIntent = (userMessage = '') => {
+  const msg = userMessage.toLowerCase();
+
+  const isRoadmapAction = /\b(move|reschedule|shift|push|delay|start.*from|start.*tomorrow|start.*friday)\b/i.test(msg) &&
+                          /\b(mission|day|roadmap|schedule)\b/i.test(msg);
+
+  const isRecommend = /\b(recommend|suggestion|suggest|routine|workout|yoga|mobility|exercise to do|how (can|to) improve my focus)\b/i.test(msg);
+
+  const isAnalyze = /\b(why|relationship|correlation|trend|productive|overall|progress|compare|affect|impact|lower|higher)\b/i.test(msg);
+
+  const isRead = /\b(how many|what is|what was|show me|my data|status|mission|history|summary|list|view|delete)\b/i.test(msg);
+
+  let category = 'OTHER';
+  if (isRoadmapAction) category = 'ROADMAP_ACTION';
+  else if (isRecommend) category = 'RECOMMEND';
+  else if (isAnalyze) category = 'ANALYZE_DATA';
+  else if (isRead) category = 'READ_DATA';
+
+  const domains = new Set();
+
+  if (/\b(step|exercise|workout|distance|walk|run|activity|health)\b/i.test(msg)) domains.add('health');
+  if (/\b(focus|session|deep work|pomodoro|interrupt|completion|rate|productive)\b/i.test(msg)) domains.add('focus');
+  if (/\b(wellness|sleep|energy|feeling|check-in|mood)\b/i.test(msg)) domains.add('wellness');
+  if (/\b(roadmap|mission|blueprint|day|schedule)\b/i.test(msg)) domains.add('roadmap');
+
+  // Multi-domain or implicit questions default to all relevant domains
+  if (isAnalyze || isRecommend || domains.size === 0 || /\b(overall|week|everything|all|doing)\b/i.test(msg)) {
+    domains.add('health');
+    domains.add('focus');
+    domains.add('wellness');
+    domains.add('roadmap');
   }
 
-  if (Object.keys(healthObj).length > 0) {
-    context.health = healthObj;
+  return {
+    category,
+    domains: Array.from(domains),
+  };
+};
+
+/**
+ * Builds intent-based personal AI context by querying PostgreSQL for `userId`.
+ *
+ * @param {number} userId - Authenticated user ID.
+ * @param {string} userMessage - User query string.
+ * @returns {Promise<Object>} Personal context object.
+ */
+const buildDbContext = async (userId, userMessage = '') => {
+  const { category, domains } = detectIntent(userMessage);
+
+  // Fetch core profile and current database date
+  const [profile, currentDateRes] = await Promise.all([
+    getUserProfile(userId),
+    db.query(`SELECT CURRENT_DATE::TEXT AS current_date`),
+  ]);
+
+  const currentDate = currentDateRes.rows[0]?.current_date;
+
+  const context = {
+    user: profile ? { name: profile.name } : null,
+    userName: profile?.name || null,
+    currentDate: currentDate || null,
+    temporalContext: { currentDate: currentDate || null },
+    intentCategory: category,
+  };
+
+  const domainPromises = [];
+
+  if (domains.includes('health')) {
+    domainPromises.push(getHealthSummary(userId).then((h) => { context.health = h; }));
   }
+  if (domains.includes('focus')) {
+    domainPromises.push(getFocusSummary(userId).then((f) => {
+      context.focus = f;
+      if (f.totalSessionsLast7Days > 0) {
+        context.recentFocus = {
+          totalSessionsLast7Days: f.totalSessionsLast7Days,
+          completedLast7Days: f.completedLast7Days,
+          totalMinutesLast7Days: f.totalMinutesLast7Days,
+        };
+      }
+    }));
+  }
+  if (domains.includes('wellness')) {
+    domainPromises.push(getWellnessSummary(userId).then((w) => {
+      context.wellness = w;
+      if (w.todaySleepHours != null) context.todaySleepHours = w.todaySleepHours;
+      if (w.todayEnergyLevel != null) context.todayEnergyLevel = w.todayEnergyLevel;
+    }));
+  }
+  if (domains.includes('roadmap')) {
+    domainPromises.push(getActiveRoadmap(userId).then((r) => {
+      if (r) context.roadmap = r;
+    }));
+  }
+
+  // If detailed health records requested (e.g. exercise details)
+  if (/\b(exercise session|workout detail|health record)\b/i.test(userMessage)) {
+    domainPromises.push(getDetailedHealthRecords(userId, 'exercise', 5).then((records) => {
+      context.detailedHealthRecords = records;
+    }));
+  }
+
+  await Promise.all(domainPromises);
 
   return context;
 };
 
 /**
- * Structural placeholder for future canonical Health JSON merging.
- *
- * @param {Object} dbContext
- * @param {Object|null} healthJson
- * @returns {Object}
+ * Merges health JSON (placeholder hook for direct payload integration if needed).
  */
 const mergeHealthContext = (dbContext, healthJson = null) => {
-  if (!healthJson) {
-    return dbContext;
-  }
+  if (!healthJson) return dbContext;
   return dbContext;
 };
 
 /**
- * Passes through the full personal context so Gemini receives all available metrics
- * regardless of specific keyword triggers in userMessage.
- *
- * @param {Object} fullContext  - The merged context from mergeHealthContext().
- * @param {string} userMessage  - The user's raw message.
- * @returns {Object}              The personal context to send to Gemini.
+ * Selects relevant context to pass to Gemini.
  */
 const selectRelevantContext = (fullContext, userMessage) => {
-  // Always return the full personal context so Gemini is fully personalized
   return fullContext;
 };
 
 module.exports = {
+  // AI Data Access Functions (Step 2)
+  getUserProfile,
+  getHealthSummary,
+  getHealthHistory,
+  getDetailedHealthRecords,
+  getFocusSummary,
+  getFocusHistory,
+  getWellnessSummary,
+  getWellnessHistory,
+  getActiveRoadmap,
+  getRoadmapHistory,
+
+  // Intent & Context Builder (Step 3 & Step 4)
+  detectIntent,
   buildDbContext,
   mergeHealthContext,
   selectRelevantContext,
 };
+
 
