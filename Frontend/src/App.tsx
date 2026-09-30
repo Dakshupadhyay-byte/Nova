@@ -95,7 +95,12 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
           {currentTab === 'focus' && <FocusScreen onBackToOverview={() => setCurrentTab('overview')} onSessionComplete={handleSessionComplete} />}
           {currentTab === 'checkin' && <CheckInScreen metrics={metrics} onUpdateMetrics={handleUpdateMetrics} onGoToOverview={() => setCurrentTab('overview')} />}
           {currentTab === 'analytics' && <AnalyticsScreen metrics={metrics} />}
+<<<<<<< Updated upstream
           {currentTab === 'history' && <HistoryScreen focusBlocks={focusBlocks} />}
+=======
+          {currentTab === 'history' && <HistoryScreen focusBlocks={focusBlocks} metrics={metrics} />}
+          {currentTab === 'blueprint' && <BlueprintScreen onOpenNovaAI={() => handleSelectTab('nova-ai')} />}
+>>>>>>> Stashed changes
           {currentTab === 'settings' && <SettingsScreen user={currentUser} />}
           {currentTab === 'nova-ai' && <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden"><NovaAIScreen /></div>}
         </main>

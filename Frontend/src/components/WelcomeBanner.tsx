@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Target, ArrowRight } from 'lucide-react';
 
 interface WelcomeBannerProps {
@@ -8,12 +8,37 @@ interface WelcomeBannerProps {
   syncCycle: number;
 }
 
+const getGreetingData = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) {
+    return { text: 'Good morning', icon: '👋' };
+  }
+  if (hour >= 12 && hour < 17) {
+    return { text: 'Good afternoon', icon: '👋' };
+  }
+  if (hour >= 17 && hour < 21) {
+    return { text: 'Good evening', icon: '👋' };
+  }
+  return { text: 'Good night', icon: '🌙' };
+};
+
 export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
   onStartFocus,
   timeframe,
   onChangeTimeframe,
   syncCycle,
 }) => {
+  const [greeting, setGreeting] = useState(getGreetingData);
+
+  useEffect(() => {
+    const updateGreeting = () => {
+      setGreeting(getGreetingData());
+    };
+
+    const interval = setInterval(updateGreeting, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="space-y-6 mb-8">
       {/* Top Header Row with Timeframe Filters */}
@@ -21,7 +46,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
         <div>
           {/* Greeting */}
           <h1 className="text-3xl lg:text-[34px] font-bold text-[#131b2e] tracking-tight leading-tight">
-            Good evening 👋 Here's your focus & wellness overview.
+            {greeting.text} {greeting.icon} Here's your focus & wellness overview.
           </h1>
           <p className="text-[14px] text-[#3d4947] max-w-2xl mt-1.5 leading-relaxed">
             See how your focus, sleep, and energy are shaping your day.
