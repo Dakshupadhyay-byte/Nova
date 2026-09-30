@@ -1,6 +1,13 @@
-import React, { useState } from 'react';
-import { RefreshCw, Info, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { RefreshCw, Info, ShieldCheck, ArrowUpRight, CheckCircle2, AlertCircle, Loader2, QrCode } from 'lucide-react';
 import { MetricOverview, DailyHealthMetric } from '../types';
+import { getIdToken } from '../services/auth';
+import {
+  createHealthPairingSession,
+  getHealthPairingStatus,
+  revokeHealthPairing,
+} from '../services/api';
+import { HealthSyncModal } from './modals/HealthSyncModal';
 
 interface ConcentricRingsProps {
   metrics: MetricOverview;
@@ -16,7 +23,128 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
   onRefresh,
 }) => {
   const [hoveredRing, setHoveredRing] = useState<'outer' | 'mid' | 'inner' | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Health Connect Sync States
+  const [syncState, setSyncState] = useState<'idle' | 'loading' | 'pairing' | 'connected' | 'error'>('idle');
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [deviceName, setDeviceName] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, []);
+
+  // Check initial connection status
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const token = await getIdToken();
+        if (!token) return;
+
+        const res = await getHealthPairingStatus(token);
+        if (res.success && res.data?.connected) {
+          setSyncState('connected');
+          setDeviceName(res.data.deviceName || 'Android Device');
+        }
+      } catch {
+        // Non-blocking
+      }
+    };
+
+    checkStatus();
+  }, []);
+
+  // Poll status while waiting for QR scan
+  const startPollingStatus = () => {
+    stopPolling();
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const token = await getIdToken();
+        if (!token) return;
+
+        const res = await getHealthPairingStatus(token);
+        if (res.success && res.data?.connected) {
+          stopPolling();
+          setSyncState('connected');
+          setDeviceName(res.data.deviceName || 'Android Device');
+          onRefresh?.();
+        }
+      } catch {
+        // Continue polling
+      }
+    }, 2500);
+  };
+
+  // Sync Now click handler
+  const handleSyncClick = async () => {
+    if (syncState === 'connected') {
+      setIsSyncModalOpen(true);
+      return;
+    }
+
+    if (syncState === 'pairing' && pairingCode) {
+      setIsSyncModalOpen(true);
+      return;
+    }
+
+    // Initiate pairing
+    stopPolling();
+    setErrorMsg(null);
+    setSyncState('loading');
+    setIsSyncModalOpen(true);
+
+    try {
+      const token = await getIdToken();
+      if (!token) {
+        setErrorMsg('Authentication token unavailable. Please re-login.');
+        setSyncState('error');
+        return;
+      }
+
+      const res = await createHealthPairingSession(token);
+      if (res.success && res.data?.pairingCode) {
+        setPairingCode(res.data.pairingCode);
+        setSyncState('pairing');
+        startPollingStatus();
+      } else {
+        setErrorMsg(res.error?.message || 'Failed to create pairing session.');
+        setSyncState('error');
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Network error occurred while connecting.');
+      setSyncState('error');
+    }
+  };
+
+  // Disconnect handler
+  const handleDisconnect = async () => {
+    try {
+      const token = await getIdToken();
+      if (token) {
+        await revokeHealthPairing(token);
+      }
+    } catch {
+      // Best-effort
+    } finally {
+      stopPolling();
+      setPairingCode(null);
+      setDeviceName(null);
+      setSyncState('idle');
+      setIsSyncModalOpen(false);
+      onRefresh?.();
+    }
+  };
 
   const hasHealthData = todayHealth !== undefined && todayHealth !== null;
 
@@ -43,12 +171,6 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
   const midDash = (midPct / 100) * midCircumference;
   const innerDash = (innerPct / 100) * innerCircumference;
 
-  const handleRefreshClick = () => {
-    setIsRefreshing(true);
-    onRefresh?.();
-    setTimeout(() => setIsRefreshing(false), 800);
-  };
-
   return (
     <div className="bg-white rounded-3xl p-6 border border-[#e2e7ff]/80 shadow-xs relative overflow-hidden transition-all duration-200">
       {/* Top Header */}
@@ -61,11 +183,49 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
         </div>
 
         <button
-          onClick={handleRefreshClick}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-medium text-[#00685f] bg-[#eefaf8] hover:bg-[#e2f5f1] border border-[#b2e7df]/80 transition-colors"
+          onClick={handleSyncClick}
+          disabled={syncState === 'loading'}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200 shadow-2xs hover:shadow-xs cursor-pointer ${
+            syncState === 'connected'
+              ? 'bg-[#DDF4EF] text-[#00685f] border border-[#00685f]/30 hover:bg-[#cbeee7]'
+              : syncState === 'pairing'
+              ? 'bg-[#f3e8ff] text-[#712ae2] border border-[#d8b4fe] hover:bg-[#eedcfd]'
+              : syncState === 'error'
+              ? 'bg-[#fff1f2] text-[#e11d48] border border-[#fecdd3] hover:bg-[#ffe4e6]'
+              : 'bg-[#eefaf8] text-[#00685f] hover:bg-[#e0f5f0] border border-[#b2e7df]/80 active:scale-[0.98]'
+          }`}
+          title={syncState === 'connected' ? 'Health Connect Device Connected' : 'Sync Health Connect App'}
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>Updated 3m ago</span>
+          {syncState === 'loading' && (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00685f]" />
+              <span>Connecting...</span>
+            </>
+          )}
+          {syncState === 'pairing' && (
+            <>
+              <QrCode className="w-3.5 h-3.5 text-[#712ae2] animate-pulse" />
+              <span>Scan to Connect</span>
+            </>
+          )}
+          {syncState === 'connected' && (
+            <>
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#00685f]" />
+              <span>Connected</span>
+            </>
+          )}
+          {syncState === 'error' && (
+            <>
+              <AlertCircle className="w-3.5 h-3.5 text-[#e11d48]" />
+              <span>Try Again</span>
+            </>
+          )}
+          {syncState === 'idle' && (
+            <>
+              <RefreshCw className="w-3.5 h-3.5 text-[#00685f]" />
+              <span>Sync Now</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -312,6 +472,18 @@ export const ConcentricRings: React.FC<ConcentricRingsProps> = ({
           <ArrowUpRight className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Health Connect QR Pairing Modal */}
+      <HealthSyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        pairingCode={pairingCode}
+        pairingState={syncState}
+        deviceName={deviceName}
+        errorMsg={errorMsg}
+        onRetry={handleSyncClick}
+        onDisconnect={handleDisconnect}
+      />
     </div>
   );
 };

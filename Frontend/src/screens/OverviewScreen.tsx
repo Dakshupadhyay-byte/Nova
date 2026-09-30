@@ -8,6 +8,7 @@ import { NovaNoticedCard } from '../components/NovaNoticedCard';
 import { NovaAICard } from '../components/NovaAICard';
 import { FocusActivityList } from '../components/FocusActivityList';
 import { WhatIfSimulatorCard } from '../components/WhatIfSimulatorCard';
+import { HealthConnectCard } from '../components/HealthConnectCard';
 import { BioDataModal } from '../components/modals/BioDataModal';
 import { PatternDetailsModal } from '../components/modals/PatternDetailsModal';
 import { CircadianModal } from '../components/modals/CircadianModal';
@@ -136,6 +137,9 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
 
           {/* What-If Simulator Card */}
           <WhatIfSimulatorCard onOpenSimulator={onOpenSimulator} />
+
+          {/* Health Connect App Card */}
+          <HealthConnectCard />
 
           {/* Today's Focus Activity Card */}
           <FocusActivityList

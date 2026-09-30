@@ -1,6 +1,6 @@
 import { Blueprint, BlueprintDay } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
 
 export interface DbUser {
   id: number;
@@ -254,5 +254,58 @@ export async function runWhatIfSimulation(
   });
 
   return result.success && result.data ? result.data : null;
+}
+
+// ─── Health Connect QR Pairing ───────────────────────────────────────────────
+
+export interface PairingSessionResponse {
+  pairingId: string;
+  pairingCode: string;
+  expiresAt: string;
+  expiresInSeconds: number;
+}
+
+export interface PairingStatusResponse {
+  connected: boolean;
+  deviceId?: string;
+  deviceName?: string | null;
+  connectedAt?: string;
+  lastSyncAt?: string | null;
+}
+
+/**
+ * Create a new temporary pairing session for Health Connect.
+ * POST /api/health/pairing/create
+ */
+export async function createHealthPairingSession(
+  token: string
+): Promise<{ success: boolean; data: PairingSessionResponse | null; error: any }> {
+  return fetchWithAuth<PairingSessionResponse>('/health/pairing/create', token, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Check if the user has an active paired Health Connect device.
+ * GET /api/health/pairing/status
+ */
+export async function getHealthPairingStatus(
+  token: string
+): Promise<{ success: boolean; data: PairingStatusResponse | null; error: any }> {
+  return fetchWithAuth<PairingStatusResponse>('/health/pairing/status', token, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Revoke the user's active Health Connect device pairing.
+ * POST /api/health/pairing/revoke
+ */
+export async function revokeHealthPairing(
+  token: string
+): Promise<{ success: boolean; data: { revoked: boolean } | null; error: any }> {
+  return fetchWithAuth<{ revoked: boolean }>('/health/pairing/revoke', token, {
+    method: 'POST',
+  });
 }
 
