@@ -73,6 +73,7 @@ export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('hero');
+  const [activeAcronym, setActiveAcronym] = useState<string | null>(null);
   const [mobileMenu, setMobileMenu] = useState(false);
 
   const sectionRefs: Record<string, React.RefObject<HTMLElement | null>> = {
@@ -86,6 +87,14 @@ export const LandingPage: React.FC = () => {
     about: useRef(null),
   };
 
+  const acronymNavItems = [
+    { letter: 'N', word: 'Notice', id: 'notice' },
+    { letter: 'O', word: 'Organize', id: 'organize' },
+    { letter: 'V', word: 'Visualize', id: 'visualize' },
+    { letter: 'A', word: 'Act', id: 'act' },
+  ];
+
+  // Header scroll detection
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 32);
@@ -100,6 +109,65 @@ export const LandingPage: React.FC = () => {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // IntersectionObserver for dynamic active state of Notice / Organize / Visualize / Act
+  useEffect(() => {
+    const acronymIds = ['notice', 'organize', 'visualize', 'act'];
+    const sectionElements = acronymIds
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (sectionElements.length === 0) return;
+
+    const visibleRatios = new Map<string, number>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          visibleRatios.set(entry.target.id, entry.isIntersecting ? entry.intersectionRatio : 0);
+        });
+
+        let bestId: string | null = null;
+        let maxRatio = 0;
+
+        visibleRatios.forEach((ratio, id) => {
+          if (ratio > maxRatio) {
+            maxRatio = ratio;
+            bestId = id;
+          }
+        });
+
+        if (bestId && maxRatio > 0.05) {
+          setActiveAcronym(bestId);
+        } else {
+          // Check if any section is within the reading viewport detection area
+          let closestId: string | null = null;
+          let minDistance = Infinity;
+          sectionElements.forEach((el) => {
+            const rect = el.getBoundingClientRect();
+            // Section is in reading zone if its top is above 65% viewport and bottom is below 100px (header offset)
+            if (rect.top <= window.innerHeight * 0.65 && rect.bottom >= 100) {
+              const dist = Math.abs(rect.top - 100);
+              if (dist < minDistance) {
+                minDistance = dist;
+                closestId = el.id;
+              }
+            }
+          });
+
+          setActiveAcronym(closestId);
+        }
+      },
+      {
+        root: null,
+        rootMargin: '-15% 0px -40% 0px',
+        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+      }
+    );
+
+    sectionElements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
   }, []);
 
   const scrollTo = (id: string) => {
@@ -192,9 +260,76 @@ export const LandingPage: React.FC = () => {
       </nav>
 
       {/* ══════════════════════════════════════════════════════════════════════
+          NOVA ACRONYM SECTION INDICATOR (LEFT DESKTOP / FLOATING MOBILE)
+      ══════════════════════════════════════════════════════════════════════ */}
+      {/* Desktop & Tablet: Vertical Indicator on Left Side */}
+      <nav
+        aria-label="Framework sections navigation"
+        className="hidden md:flex fixed left-3 sm:left-4 lg:left-6 xl:left-8 top-1/2 -translate-y-1/2 z-40 flex-col items-start bg-white/90 backdrop-blur-xl border border-[#E5EBE9] rounded-2xl p-1.5 lg:p-2 shadow-lg shadow-[#00685F]/5 transition-all duration-300"
+      >
+        <div className="px-2.5 py-1 mb-1 hidden xl:block">
+          <span className="text-[10px] font-bold tracking-[0.18em] text-[#00685F] uppercase font-mono">Framework</span>
+        </div>
+        <div className="flex flex-col gap-1 w-full">
+          {acronymNavItems.map((item) => {
+            const isActive = activeAcronym === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => scrollTo(item.id)}
+                aria-label={`Scroll to ${item.word} section`}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-300 cursor-pointer w-full text-left group ${
+                  isActive
+                    ? 'bg-[#DDF4EF] text-[#00685F] shadow-xs'
+                    : 'text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5]'
+                }`}
+              >
+                <span
+                  className={`w-6 h-6 rounded-lg flex items-center justify-center text-[12px] font-bold transition-all duration-300 ${
+                    isActive
+                      ? 'bg-[#00685F] text-white shadow-xs scale-105'
+                      : 'bg-[#E5EBE9]/70 text-[#687573] group-hover:bg-[#E5EBE9] group-hover:text-[#0D2422]'
+                  }`}
+                >
+                  {item.letter}
+                </span>
+                <span className={`tracking-tight transition-colors ${isActive ? 'text-[#00685F] font-bold' : 'text-[#687573] group-hover:text-[#0D2422]'}`}>
+                  {item.word}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* Mobile: Compact Horizontal Floating Navigation */}
+      <nav
+        aria-label="Mobile framework sections navigation"
+        className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 bg-white/95 backdrop-blur-xl border border-[#E5EBE9] rounded-full p-1.5 shadow-xl shadow-[#00685F]/10"
+      >
+        {acronymNavItems.map((item) => {
+          const isActive = activeAcronym === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => scrollTo(item.id)}
+              aria-label={`Scroll to ${item.word} section`}
+              className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold transition-all duration-300 cursor-pointer ${
+                isActive
+                  ? 'bg-[#00685F] text-white shadow-sm scale-105'
+                  : 'text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5]'
+              }`}
+            >
+              {item.letter}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* ══════════════════════════════════════════════════════════════════════
           HERO
       ══════════════════════════════════════════════════════════════════════ */}
-      <section ref={sectionRefs.hero as React.RefObject<HTMLElement>} id="hero" className="min-h-screen flex flex-col pt-32 pb-20 px-6">
+      <section ref={sectionRefs.hero as React.RefObject<HTMLElement>} id="hero" className="min-h-screen flex flex-col pt-32 pb-20 px-6 scroll-mt-24">
         <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col">
           {/* Top Label & Hero Logo */}
           <div className="flex flex-col items-center justify-center gap-4 mb-6" style={{ animation: 'fadeUp 0.6s ease both' }}>
@@ -362,33 +497,8 @@ export const LandingPage: React.FC = () => {
           ACRONYM SECTIONS — N · O · V · A
       ══════════════════════════════════════════════════════════════════════ */}
 
-      {/* Sticky NOVA Acronym Progress Indicator */}
-      <div className="sticky top-16 z-40 flex justify-center py-3 pointer-events-none">
-        <div className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-md border border-[#E5EBE9] rounded-full p-1.5 sm:px-4 sm:py-1.5 shadow-sm pointer-events-auto max-w-[95vw] overflow-x-auto no-scrollbar">
-          {NOVA_ACRONYM.map((item) => {
-            const isActive = activeSection === item.word.toLowerCase();
-            const letter = item.letter;
-            const remaining = item.word.slice(1).toLowerCase();
-            return (
-              <button
-                key={item.letter}
-                onClick={() => scrollTo(item.word.toLowerCase())}
-                className={`flex items-baseline gap-0.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer shrink-0 ${
-                  isActive
-                    ? 'bg-[#00685F] text-white shadow-xs'
-                    : 'text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5]'
-                }`}
-              >
-                <span className="text-[14px] sm:text-[15px] font-bold leading-none">{letter}</span>
-                <span className="text-[11px] sm:text-[12px] font-medium leading-none">{remaining}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* ── N: NOTICE ─────────────────────────────────────────────────────── */}
-      <section ref={sectionRefs.notice as React.RefObject<HTMLElement>} id="notice" className="py-28 px-6">
+      <section ref={sectionRefs.notice as React.RefObject<HTMLElement>} id="notice" className="py-28 px-6 scroll-mt-24">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <Reveal>
@@ -453,7 +563,7 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ── O: ORGANIZE ───────────────────────────────────────────────────── */}
-      <section ref={sectionRefs.organize as React.RefObject<HTMLElement>} id="organize" className="py-28 px-6 bg-white border-y border-[#E5EBE9]">
+      <section ref={sectionRefs.organize as React.RefObject<HTMLElement>} id="organize" className="py-28 px-6 bg-white border-y border-[#E5EBE9] scroll-mt-24">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <Reveal delay={0.1}>
@@ -515,7 +625,7 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ── V: VISUALIZE ──────────────────────────────────────────────────── */}
-      <section ref={sectionRefs.visualize as React.RefObject<HTMLElement>} id="visualize" className="py-28 px-6">
+      <section ref={sectionRefs.visualize as React.RefObject<HTMLElement>} id="visualize" className="py-28 px-6 scroll-mt-24">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <Reveal>
@@ -577,7 +687,7 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ── A: ACT ────────────────────────────────────────────────────────── */}
-      <section ref={sectionRefs.act as React.RefObject<HTMLElement>} id="act" className="py-28 px-6 bg-white border-y border-[#E5EBE9]">
+      <section ref={sectionRefs.act as React.RefObject<HTMLElement>} id="act" className="py-28 px-6 bg-white border-y border-[#E5EBE9] scroll-mt-24">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <Reveal delay={0.1}>
@@ -668,7 +778,7 @@ export const LandingPage: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════════════════
           FEATURES GRID
       ══════════════════════════════════════════════════════════════════════ */}
-      <section ref={sectionRefs.features as React.RefObject<HTMLElement>} id="features" className="py-28 px-6 bg-white border-y border-[#E5EBE9]">
+      <section ref={sectionRefs.features as React.RefObject<HTMLElement>} id="features" className="py-28 px-6 bg-white border-y border-[#E5EBE9] scroll-mt-24">
         <div className="max-w-5xl mx-auto">
           <Reveal>
             <div className="text-center mb-14">
@@ -695,7 +805,7 @@ export const LandingPage: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════════════════
           HISTORY SHOWCASE
       ══════════════════════════════════════════════════════════════════════ */}
-      <section ref={sectionRefs.history as React.RefObject<HTMLElement>} id="history" className="py-28 px-6">
+      <section ref={sectionRefs.history as React.RefObject<HTMLElement>} id="history" className="py-28 px-6 scroll-mt-24">
         <div className="max-w-5xl mx-auto">
           <Reveal>
             <div className="text-center mb-14">
@@ -761,7 +871,7 @@ export const LandingPage: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════════════════
           ABOUT
       ══════════════════════════════════════════════════════════════════════ */}
-      <section ref={sectionRefs.about as React.RefObject<HTMLElement>} id="about" className="py-28 px-6 bg-white border-y border-[#E5EBE9]">
+      <section ref={sectionRefs.about as React.RefObject<HTMLElement>} id="about" className="py-28 px-6 bg-white border-y border-[#E5EBE9] scroll-mt-24">
         <div className="max-w-3xl mx-auto text-center">
           <Reveal>
             <p className="text-[11px] font-bold tracking-[0.2em] text-[#00685F] uppercase mb-4">About NOVA</p>
