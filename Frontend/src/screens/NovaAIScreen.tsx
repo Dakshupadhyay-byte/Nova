@@ -355,15 +355,15 @@ export const NovaAIScreen: React.FC = () => {
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-[#F7F9F8] relative">
+    <div className="flex-1 flex flex-col min-h-0 bg-[#F7F9F8] relative overflow-hidden">
       {/* ── Ambient Background ── */}
-      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
         <div className="absolute top-0 right-0 w-[500px] h-[400px] bg-[#7C5CFC]/[0.03] blur-3xl rounded-full" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#00685F]/[0.03] blur-3xl rounded-full" />
       </div>
 
       {/* ── Page Header ── */}
-      <div className="shrink-0 px-6 py-4 border-b border-[#E5EBE9] bg-white/80 backdrop-blur-sm">
+      <div className="shrink-0 px-6 py-4 border-b border-[#E5EBE9] bg-white/80 backdrop-blur-sm z-10">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <div className="w-10 h-10 flex items-center justify-center">
             <NovaLogo size={40} />
@@ -381,8 +381,8 @@ export const NovaAIScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Messages Area ── */}
-      <div className="flex-1 overflow-y-auto">
+      {/* ── Messages Area (scrollable) ── */}
+      <div className="flex-1 overflow-y-auto min-h-0" style={{ paddingBottom: '12px' }}>
         <div className="max-w-3xl mx-auto px-6 py-6">
           {!hasMessages ? (
             <EmptyState onPromptClick={handleSend} isLoading={isLoading} />
@@ -422,50 +422,68 @@ export const NovaAIScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Input Area ── */}
-      <div className="shrink-0 border-t border-[#E5EBE9] bg-white/90 backdrop-blur-sm px-6 py-4">
-        <div className="max-w-3xl mx-auto">
-          {/* Suggested prompts — shown when there are messages, collapsed */}
-          {hasMessages && !isLoading && (
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {SUGGESTED_PROMPTS.slice(0, 3).map((prompt) => (
-                <button
-                  key={prompt}
-                  onClick={() => handleSend(prompt)}
-                  disabled={isLoading}
-                  className="px-2.5 py-1 rounded-lg bg-[#F7F9F8] border border-[#E5EBE9] text-[11.5px] text-[#687573] hover:border-[#7C5CFC]/40 hover:text-[#7C5CFC] hover:bg-[#f5f3ff] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          )}
+      {/* ── Sticky Composer (pinned at bottom via flex) ── */}
+      <div className="shrink-0 relative z-20">
+        {/* Subtle fade gradient above composer */}
+        <div
+          className="absolute -top-8 left-0 right-0 h-8 pointer-events-none"
+          style={{ background: 'linear-gradient(to bottom, transparent, #F7F9F8)' }}
+        />
 
-          <div className="flex items-end gap-3 bg-white border border-[#dae2fd] rounded-2xl px-4 py-3 shadow-xs focus-within:border-[#7C5CFC]/50 focus-within:ring-2 focus-within:ring-[#7C5CFC]/10 transition-all">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask NOVA anything…"
-              rows={1}
-              disabled={isLoading}
-              className="flex-1 resize-none bg-transparent text-[14px] text-[#131b2e] placeholder-[#9BA8A5] outline-none leading-relaxed max-h-[140px] min-h-[24px] disabled:opacity-60"
-              style={{ height: 'auto' }}
-              aria-label="Message NOVA AI"
-            />
-            <button
-              onClick={() => handleSend()}
-              disabled={!input.trim() || isLoading}
-              aria-label="Send message"
-              className="shrink-0 w-9 h-9 rounded-xl bg-[#7C5CFC] hover:bg-[#6B4DE6] disabled:bg-[#dae2fd] disabled:cursor-not-allowed flex items-center justify-center transition-all duration-150 shadow-sm shadow-[#7C5CFC]/30 disabled:shadow-none"
+        <div className="bg-[#F7F9F8] px-4 pb-4 pt-2">
+          <div className="max-w-[800px] mx-auto">
+            {/* Suggested prompts — shown when there are messages */}
+            {hasMessages && !isLoading && (
+              <div className="flex flex-wrap gap-1.5 mb-2.5 px-1">
+                {SUGGESTED_PROMPTS.slice(0, 3).map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => handleSend(prompt)}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-[#E5EBE9] text-[11.5px] text-[#687573] hover:border-[#7C5CFC]/40 hover:text-[#7C5CFC] hover:bg-[#f5f3ff] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Composer container */}
+            <div
+              className="flex items-end gap-3 bg-white border border-[#dae2fd] rounded-2xl px-4 py-3 transition-all duration-200 focus-within:border-[#7C5CFC]/50 focus-within:ring-2 focus-within:ring-[#7C5CFC]/10"
+              style={{
+                boxShadow: '0 -1px 12px rgba(124, 92, 252, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04)',
+              }}
             >
-              <ArrowUp className="w-4 h-4 text-white" />
-            </button>
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask NOVA anything…"
+                rows={1}
+                disabled={isLoading}
+                className="flex-1 resize-none bg-transparent text-[14px] text-[#131b2e] placeholder-[#9BA8A5] outline-none leading-relaxed max-h-[140px] min-h-[24px] disabled:opacity-60"
+                style={{ height: 'auto' }}
+                aria-label="Message NOVA AI"
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={!input.trim() || isLoading}
+                aria-label="Send message"
+                className="shrink-0 w-9 h-9 rounded-xl bg-[#7C5CFC] hover:bg-[#6B4DE6] disabled:bg-[#dae2fd] disabled:cursor-not-allowed flex items-center justify-center transition-all duration-150 shadow-sm shadow-[#7C5CFC]/30 disabled:shadow-none"
+              >
+                {isLoading ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <ArrowUp className="w-4 h-4 text-white" />
+                )}
+              </button>
+            </div>
+            <p className="text-[10px] text-[#9BA8A5] mt-2 text-center">
+              Enter to send · Shift + Enter for new line · NOVA AI uses your real NOVA data
+            </p>
           </div>
-          <p className="text-[10px] text-[#9BA8A5] mt-2 text-center">
-            Enter to send · Shift + Enter for new line · NOVA AI uses your real NOVA data
-          </p>
         </div>
       </div>
     </div>

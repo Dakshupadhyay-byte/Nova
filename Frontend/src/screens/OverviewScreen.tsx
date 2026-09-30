@@ -34,7 +34,6 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
   onOpenSimulator,
   searchQuery,
 }) => {
-  const [timeframe, setTimeframe] = useState<'today' | '7days' | 'cycles'>('today');
   const [isBioModalOpen, setIsBioModalOpen] = useState(false);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
   const [isCircadianModalOpen, setIsCircadianModalOpen] = useState(false);
@@ -90,8 +89,6 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
       {/* Welcome Banner & Action Bar */}
       <WelcomeBanner
         onStartFocus={onStartFocus}
-        timeframe={timeframe}
-        onChangeTimeframe={setTimeframe}
         syncCycle={metrics.syncCycle}
       />
 
