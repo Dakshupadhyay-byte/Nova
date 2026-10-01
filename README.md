@@ -17,7 +17,8 @@
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-00685F?style=for-the-badge&logo=vercel&logoColor=white)](https://nova-omega-sable.vercel.app/)
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/NOVA-Wellness/Nova)
-[![Demo Video](https://img.shields.io/badge/Demo-Video-712AE2?style=for-the-badge&logo=youtube&logoColor=white)](#22-demo)
+[![Demo Video](https://img.shields.io/badge/Demo-Video-712AE2?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/4K4ktwDnZpk)
+[![Presentation](https://img.shields.io/badge/Presentation-Gslides-EA4335?style=for-the-badge&logo=google-slides&logoColor=white)](https://docs.google.com/presentation/d/1S7dqkkIVTNm0Rvxm-dfwBFq1XCnv_K5-/edit?usp=sharing&ouid=113880005579482280751&rtpof=true&sd=true)
 
 ![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript&logoColor=white)
@@ -35,9 +36,11 @@
 ## 1. Project Overview
 
 - **🌐 Live Web Application:** [https://nova-omega-sable.vercel.app/](https://nova-omega-sable.vercel.app/)
-- 📱 **NOVA Health Connect APK:** [Download APK](https://drive.google.com/file/d/1JR9-z9Vt0-wDKcS3W6WMq0v_iIPittb1/view?usp=drive_link)
+- 📱 **NOVA Health Connect APK:** [Download APK](https://drive.google.com/file/d/1_fmLiuRY47-yU3s0378ciIMVIyW9aO9D/view?usp=sharing)
 - **💻 GitHub Repository:** [https://github.com/NOVA-Wellness/Nova](https://github.com/NOVA-Wellness/Nova)
-- **🎥 ASYNC'26 Demo Video:** *TODO — Add final ASYNC'26 demo video link*
+- **💻 Presentation :** [View PPT](https://docs.google.com/presentation/d/1S7dqkkIVTNm0Rvxm-dfwBFq1XCnv_K5-/edit?usp=sharing&ouid=113880005579482280751&rtpof=true&sd=true)
+- **🎥 ASYNC'26 Demo Video:** [https://youtu.be/4K4ktwDnZpk](https://youtu.be/4K4ktwDnZpk)
+- **📱 NOVA Health Connect Repo**: [https://github.com/Dakshupadhyay-byte/NOVA-Health-Sync](https://github.com/Dakshupadhyay-byte/NOVA-Health-Sync)
 
 ---
 
@@ -85,6 +88,12 @@ NOVA connects physical wellness data with productivity tools and an AI companion
 | **Availability** | Local app dependent | Single cloud API dependency | 3-Tier AI Fallback Engine (Gemini 3.1 → 2.5 → Local Llama 3.2) |
 
 ---
+
+## NOVA at a Glance
+<p align="center">
+  <img src="assets/image.png" alt="nova-snapshot">
+</p>
+
 
 ## 5. NOVA Health Connect — Our Android Health Bridge
 
@@ -532,7 +541,7 @@ If Tier 1 experiences rate-limiting or transient errors, the backend automatical
 - **Live Application:** [https://nova-omega-sable.vercel.app/](https://nova-omega-sable.vercel.app/)
 - 📱 **Android App:** [Download NOVA Health Connect APK](https://drive.google.com/file/d/1JR9-z9Vt0-wDKcS3W6WMq0v_iIPittb1/view?usp=drive_link)
 - **GitHub:** [https://github.com/NOVA-Wellness/Nova](https://github.com/NOVA-Wellness/Nova)
-- **Demo Video:** *TODO — Add final ASYNC'26 demo video link*
+- **Demo Video:** [https://youtu.be/4K4ktwDnZpk](https://youtu.be/4K4ktwDnZpk)
 
 ---
 
