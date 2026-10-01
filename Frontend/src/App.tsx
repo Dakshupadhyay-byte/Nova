@@ -22,6 +22,7 @@ import { BlueprintScreen } from './screens/BlueprintScreen';
 import { SimulatorScreen } from './screens/SimulatorScreen';
 import { LoginScreen, AuthenticatedUser } from './screens/LoginScreen';
 import { LandingPage } from './screens/landing/LandingPage';
+import { ThemeProvider } from './config/ThemeContext';
 import {
   INITIAL_METRICS,
   INITIAL_FOCUS_BLOCKS,
@@ -115,8 +116,8 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
   // If not authenticated (and done loading), redirect to login
   if (authState.isLoading) {
     return (
-      <div className="min-h-screen bg-[#faf8ff] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#00685F]/30 border-t-[#00685F] rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--nova-bg)' }}>
+        <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'rgba(0,104,95,0.3)', borderTopColor: 'var(--nova-brand)' }} />
       </div>
     );
   }
@@ -146,7 +147,7 @@ const AppShell: React.FC<AppShellProps> = ({ authState, onLogout }) => {
   };
 
   return (
-    <div className="h-screen bg-[#faf8ff] text-[#131b2e] flex flex-col md:flex-row antialiased overflow-hidden relative">
+    <div className="h-screen flex flex-col md:flex-row antialiased overflow-hidden relative" style={{ backgroundColor: 'var(--nova-bg)', color: 'var(--nova-text-primary)' }}>
       {/* Dynamic Ambient Background Mesh */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
         <div className="absolute -top-40 -left-40 w-[700px] h-[700px] bg-gradient-to-br from-[#00685f]/15 via-[#99dfd5]/10 to-transparent blur-[130px] rounded-full animate-pulse" style={{ animationDuration: '14s' }} />
@@ -195,8 +196,8 @@ interface LoginRouteProps {
 const LoginRoute: React.FC<LoginRouteProps> = ({ authState, onLoginSuccess }) => {
   if (authState.isLoading) {
     return (
-      <div className="min-h-screen bg-[#faf8ff] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#00685F]/30 border-t-[#00685F] rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--nova-bg)' }}>
+        <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: 'rgba(0,104,95,0.3)', borderTopColor: 'var(--nova-brand)' }} />
       </div>
     );
   }
@@ -249,53 +250,55 @@ export default function App() {
   };
 
   return (
-    <BrowserRouter>
-      <NovaOrbCursor />
-      <Routes>
-        {/* Public landing page */}
-        <Route path="/" element={<LandingPage />} />
+    <ThemeProvider>
+      <BrowserRouter>
+        <NovaOrbCursor />
+        <Routes>
+          {/* Public landing page */}
+          <Route path="/" element={<LandingPage />} />
 
-        {/* Login */}
-        <Route path="/login" element={
-          <LoginRoute authState={authState} onLoginSuccess={handleLoginSuccess} />
-        } />
+          {/* Login */}
+          <Route path="/login" element={
+            <LoginRoute authState={authState} onLoginSuccess={handleLoginSuccess} />
+          } />
 
-        {/* Protected dashboard — catch all app tabs */}
-        <Route path="/dashboard" element={
-          <AppShell authState={authState} onLogout={handleLogout} />
-        } />
-        <Route path="/nova-ai" element={
-          <AppShell authState={authState} onLogout={handleLogout} />
-        } />
-        <Route path="/ai" element={
-          <AppShell authState={authState} onLogout={handleLogout} />
-        } />
-        <Route path="/focus" element={
-          <AppShell authState={authState} onLogout={handleLogout} />
-        } />
-        <Route path="/checkin" element={
-          <AppShell authState={authState} onLogout={handleLogout} />
-        } />
-        <Route path="/analytics" element={
-          <AppShell authState={authState} onLogout={handleLogout} />
-        } />
-        <Route path="/history" element={
-          <AppShell authState={authState} onLogout={handleLogout} />
-        } />
-        <Route path="/blueprint" element={
-          <AppShell authState={authState} onLogout={handleLogout} />
-        } />
-        <Route path="/simulator" element={
-          <AppShell authState={authState} onLogout={handleLogout} />
-        } />
-        <Route path="/settings" element={
-          <AppShell authState={authState} onLogout={handleLogout} />
-        } />
+          {/* Protected dashboard — catch all app tabs */}
+          <Route path="/dashboard" element={
+            <AppShell authState={authState} onLogout={handleLogout} />
+          } />
+          <Route path="/nova-ai" element={
+            <AppShell authState={authState} onLogout={handleLogout} />
+          } />
+          <Route path="/ai" element={
+            <AppShell authState={authState} onLogout={handleLogout} />
+          } />
+          <Route path="/focus" element={
+            <AppShell authState={authState} onLogout={handleLogout} />
+          } />
+          <Route path="/checkin" element={
+            <AppShell authState={authState} onLogout={handleLogout} />
+          } />
+          <Route path="/analytics" element={
+            <AppShell authState={authState} onLogout={handleLogout} />
+          } />
+          <Route path="/history" element={
+            <AppShell authState={authState} onLogout={handleLogout} />
+          } />
+          <Route path="/blueprint" element={
+            <AppShell authState={authState} onLogout={handleLogout} />
+          } />
+          <Route path="/simulator" element={
+            <AppShell authState={authState} onLogout={handleLogout} />
+          } />
+          <Route path="/settings" element={
+            <AppShell authState={authState} onLogout={handleLogout} />
+          } />
 
-        {/* Redirect old /login-style unknown paths to landing */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Redirect old /login-style unknown paths to landing */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

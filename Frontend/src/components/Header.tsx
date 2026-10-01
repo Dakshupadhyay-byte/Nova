@@ -47,10 +47,9 @@ const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
 };
 
 function FeatureIcon({ entry, active }: { entry: FeatureEntry; active: boolean }) {
-  const cls = `w-[18px] h-[18px] ${active ? 'text-[#00685f]' : 'text-[#6d7a77]'}`;
   if (entry.iconType === 'logo') return <NovaLogo size={18} />;
   const Icon = ICON_MAP[entry.lucideIcon ?? ''];
-  return Icon ? <Icon className={cls} /> : null;
+  return Icon ? <Icon className={`w-[18px] h-[18px] ${active ? 'text-[var(--nova-brand)]' : 'text-[var(--nova-text-muted)]'}`} /> : null;
 }
 
 interface HeaderProps {
@@ -86,7 +85,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   useEffect(() => { setSelectedIndex(-1); }, [searchVal]);
 
-  // Ctrl/Cmd+K shortcut
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); inputRef.current?.focus(); }
@@ -95,19 +93,12 @@ export const Header: React.FC<HeaderProps> = ({
     return () => window.removeEventListener('keydown', h);
   }, []);
 
-  // Close on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (containerRef.current && !containerRef.current.contains(target)) {
-        setIsFocused(false);
-      }
-      if (notifRef.current && !notifRef.current.contains(target)) {
-        setShowNotifications(false);
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
-        setShowUserMenu(false);
-      }
+      if (containerRef.current && !containerRef.current.contains(target)) setIsFocused(false);
+      if (notifRef.current && !notifRef.current.contains(target)) setShowNotifications(false);
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) setShowUserMenu(false);
     };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
@@ -137,14 +128,9 @@ export const Header: React.FC<HeaderProps> = ({
         setIsScrolled(window.scrollY > 10);
       }
     };
-
-    // Attach to scrollable main container or window
     const mainEl = document.querySelector('main');
-    if (mainEl) {
-      mainEl.addEventListener('scroll', handleScroll, { passive: true });
-    }
+    if (mainEl) mainEl.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('scroll', handleScroll, { passive: true });
-
     return () => {
       if (mainEl) mainEl.removeEventListener('scroll', handleScroll);
       window.removeEventListener('scroll', handleScroll);
@@ -155,16 +141,20 @@ export const Header: React.FC<HeaderProps> = ({
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <header className={`h-16 px-4 sm:px-6 border-b flex items-center justify-between sticky top-0 z-[20] shrink-0 transition-all duration-300 ${
-      isScrolled
-        ? 'bg-white/94 backdrop-blur-2xl border-[#dae2fd] shadow-md shadow-[#00685f]/8'
-        : 'bg-white/65 backdrop-blur-md border-transparent shadow-none'
-    }`}>
-
-      {/* Search + Dropdown */}
+    <header
+      className="h-16 px-4 sm:px-6 border-b flex items-center justify-between sticky top-0 z-[20] shrink-0 transition-all duration-300"
+      style={{
+        background: isScrolled ? 'var(--nova-header-bg-scrolled)' : 'var(--nova-header-bg)',
+        borderColor: isScrolled ? 'var(--nova-header-border)' : 'transparent',
+        backdropFilter: 'blur(16px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+        boxShadow: isScrolled ? '0 4px 16px rgba(0,0,0,0.08)' : 'none',
+      }}
+    >
+      {/* Search */}
       <div ref={containerRef} className="relative w-full max-w-lg">
         <div className="relative">
-          <Search className="w-4 h-4 text-[#6d7a77] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--nova-text-muted)' }} />
           <input
             ref={inputRef}
             type="text"
@@ -180,19 +170,44 @@ export const Header: React.FC<HeaderProps> = ({
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
             {searchVal ? (
-              <button onClick={() => { setSearchVal(''); onSearch?.(''); inputRef.current?.focus(); }} aria-label="Clear search" className="w-5 h-5 flex items-center justify-center text-[#9BA8A5] hover:text-[#131b2e] transition-colors cursor-pointer">
+              <button
+                onClick={() => { setSearchVal(''); onSearch?.(''); inputRef.current?.focus(); }}
+                aria-label="Clear search"
+                className="w-5 h-5 flex items-center justify-center transition-colors cursor-pointer"
+                style={{ color: 'var(--nova-text-muted)' }}
+              >
                 <X className="w-3.5 h-3.5" />
               </button>
             ) : (
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-[#6d7a77] bg-white/80 border border-[#dae2fd] rounded-md shadow-2xs pointer-events-none">⌘K</kbd>
+              <kbd
+                className="px-1.5 py-0.5 text-[10px] font-mono rounded-md shadow-2xs pointer-events-none"
+                style={{
+                  color: 'var(--nova-text-muted)',
+                  background: 'var(--nova-surface-muted)',
+                  border: '1px solid var(--nova-border)',
+                }}
+              >
+                ⌘K
+              </kbd>
             )}
           </div>
         </div>
 
         {isFocused && (
-          <div role="listbox" aria-label="Search results" className="absolute top-full left-0 right-0 mt-2 glass-strong rounded-2xl shadow-xl z-[40] overflow-hidden" style={{ boxShadow: '0 12px 40px rgba(0,102,95,0.12), 0 4px 12px rgba(0,0,0,0.06)' }}>
-            <div className="px-4 pt-3 pb-1.5 border-b border-[#f0f3fd]">
-              <span className="text-[10.5px] font-bold text-[#6d7a77] tracking-widest uppercase">{searchVal.trim() ? 'Features' : 'Quick Access'}</span>
+          <div
+            role="listbox"
+            aria-label="Search results"
+            className="absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-xl z-[40] overflow-hidden"
+            style={{
+              background: 'var(--nova-overlay-surface)',
+              border: '1px solid var(--nova-border)',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08)',
+            }}
+          >
+            <div className="px-4 pt-3 pb-1.5 border-b" style={{ borderColor: 'var(--nova-divider)' }}>
+              <span className="text-[10.5px] font-bold tracking-widest uppercase" style={{ color: 'var(--nova-text-muted)' }}>
+                {searchVal.trim() ? 'Features' : 'Quick Access'}
+              </span>
             </div>
             {listItems.length > 0 ? (
               <ul className="py-1.5 max-h-72 overflow-y-auto">
@@ -203,27 +218,54 @@ export const Header: React.FC<HeaderProps> = ({
                       aria-selected={idx === selectedIndex}
                       onClick={() => handleNavigate(feature)}
                       onMouseEnter={() => setSelectedIndex(idx)}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors duration-100 cursor-pointer ${idx === selectedIndex ? 'bg-[#e2f5f1]' : 'hover:bg-[#f4f7ff]'}`}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors duration-100 cursor-pointer"
+                      style={{
+                        backgroundColor: idx === selectedIndex ? 'var(--nova-search-selected)' : 'transparent',
+                      }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >
-                      <span className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${idx === selectedIndex ? 'bg-white border-[#99dfd5]' : 'bg-[#f7f9fb] border-[#e2e7ff]'}`}>
+                      <span
+                        className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border transition-colors"
+                        style={{
+                          background: idx === selectedIndex ? 'var(--nova-icon-active-bg)' : 'var(--nova-icon-bg)',
+                          borderColor: idx === selectedIndex ? 'var(--nova-icon-active-border)' : 'var(--nova-icon-border)',
+                        }}
+                      >
                         <FeatureIcon entry={feature} active={idx === selectedIndex} />
                       </span>
                       <span className="flex flex-col min-w-0">
-                        <span className={`text-[13.5px] font-semibold leading-tight ${idx === selectedIndex ? 'text-[#00685f]' : 'text-[#131b2e]'}`}>{feature.label}</span>
-                        <span className={`text-[11.5px] leading-tight mt-0.5 ${idx === selectedIndex ? 'text-[#00685f]/70' : 'text-[#6d7a77]'}`}>{feature.description}</span>
+                        <span
+                          className="text-[13.5px] font-semibold leading-tight"
+                          style={{ color: idx === selectedIndex ? 'var(--nova-brand)' : 'var(--nova-text-primary)' }}
+                        >
+                          {feature.label}
+                        </span>
+                        <span
+                          className="text-[11.5px] leading-tight mt-0.5"
+                          style={{ color: idx === selectedIndex ? 'var(--nova-brand)' : 'var(--nova-text-muted)' }}
+                        >
+                          {feature.description}
+                        </span>
                       </span>
-                      {idx === selectedIndex && <span className="ml-auto shrink-0 text-[10px] font-mono text-[#00685f]/50 border border-[#99dfd5] rounded px-1 py-0.5">↵</span>}
+                      {idx === selectedIndex && (
+                        <span
+                          className="ml-auto shrink-0 text-[10px] font-mono rounded px-1 py-0.5"
+                          style={{ color: 'var(--nova-brand)', border: '1px solid var(--nova-brand-border)' }}
+                        >
+                          ↵
+                        </span>
+                      )}
                     </button>
                   </li>
                 ))}
               </ul>
             ) : (
               <div className="px-4 py-6 text-center">
-                <p className="text-[13px] font-medium text-[#687573]">No matching features</p>
-                <p className="text-[11.5px] text-[#9BA8A5] mt-1">Try: Focus, Analytics, Check-in, NOVA AI, History</p>
+                <p className="text-[13px] font-medium" style={{ color: 'var(--nova-text-secondary)' }}>No matching features</p>
+                <p className="text-[11.5px] mt-1" style={{ color: 'var(--nova-text-muted)' }}>Try: Focus, Analytics, Check-in, NOVA AI, History</p>
               </div>
             )}
-            <div className="px-4 py-2 border-t border-[#f0f3fd] flex items-center gap-3 text-[10px] text-[#9BA8A5]">
+            <div className="px-4 py-2 border-t flex items-center gap-3 text-[10px]" style={{ borderColor: 'var(--nova-divider)', color: 'var(--nova-text-placeholder)' }}>
               <span><kbd className="font-mono">↑↓</kbd> navigate</span>
               <span><kbd className="font-mono">↵</kbd> open</span>
               <span><kbd className="font-mono">Esc</kbd> close</span>
@@ -236,21 +278,61 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-4 ml-4 shrink-0">
         {/* Notifications */}
         <div ref={notifRef} className="relative">
-          <button onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false); }} aria-label="Notifications" className="w-9 h-9 rounded-xl flex items-center justify-center text-[#3d4947] hover:text-[#131b2e] hover:bg-[#f0f3fd] border border-[#dae2fd]/70 transition-colors relative">
+          <button
+            onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false); }}
+            aria-label="Notifications"
+            className="w-9 h-9 rounded-xl flex items-center justify-center border transition-colors relative cursor-pointer"
+            style={{
+              color: 'var(--nova-text-secondary)',
+              borderColor: 'var(--nova-border)',
+              background: 'transparent',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--nova-dropdown-hover)'; e.currentTarget.style.color = 'var(--nova-text-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--nova-text-secondary)'; }}
+          >
             <Bell className="w-4 h-4" />
-            {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#712ae2] rounded-full ring-2 ring-white" />}
+            {unreadCount > 0 && (
+              <span
+                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full ring-2"
+                style={{ background: 'var(--nova-purple)', ringColor: 'var(--nova-surface-solid)' }}
+              />
+            )}
           </button>
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-white border border-[#dae2fd] rounded-2xl shadow-xl p-4 z-50">
-              <div className="flex items-center justify-between pb-3 border-b border-[#f0f3fd]">
-                <div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-[#712ae2]" /><span className="text-[13px] font-semibold text-[#131b2e]">NOVA Insights</span></div>
-                {unreadCount > 0 && <button onClick={markAllRead} className="text-[11px] text-[#00685f] hover:underline font-medium">Mark all read</button>}
+            <div
+              className="absolute right-0 mt-2 w-80 rounded-2xl shadow-xl p-4 z-50"
+              style={{
+                background: 'var(--nova-overlay-surface)',
+                border: '1px solid var(--nova-border)',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: 'var(--nova-divider)' }}>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" style={{ color: 'var(--nova-purple)' }} />
+                  <span className="text-[13px] font-semibold" style={{ color: 'var(--nova-text-primary)' }}>NOVA Insights</span>
+                </div>
+                {unreadCount > 0 && (
+                  <button onClick={markAllRead} className="text-[11px] font-medium hover:underline" style={{ color: 'var(--nova-brand)' }}>
+                    Mark all read
+                  </button>
+                )}
               </div>
               <div className="mt-2 space-y-2 max-h-72 overflow-y-auto">
                 {notifications.map((n) => (
-                  <div key={n.id} className={`p-2.5 rounded-xl ${n.read ? 'bg-[#faf8ff]' : 'bg-[#f4f7ff] border-l-2 border-[#712ae2]'}`}>
-                    <div className="flex items-center justify-between"><span className="text-[12px] font-semibold text-[#131b2e]">{n.title}</span><span className="text-[10px] text-[#6d7a77]">{n.time}</span></div>
-                    <p className="text-[11.5px] text-[#3d4947] mt-1 leading-relaxed">{n.desc}</p>
+                  <div
+                    key={n.id}
+                    className="p-2.5 rounded-xl"
+                    style={{
+                      background: n.read ? 'var(--nova-notif-read-bg)' : 'var(--nova-notif-unread-bg)',
+                      borderLeft: n.read ? 'none' : `2px solid var(--nova-purple)`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] font-semibold" style={{ color: 'var(--nova-text-primary)' }}>{n.title}</span>
+                      <span className="text-[10px]" style={{ color: 'var(--nova-text-muted)' }}>{n.time}</span>
+                    </div>
+                    <p className="text-[11.5px] mt-1 leading-relaxed" style={{ color: 'var(--nova-text-secondary)' }}>{n.desc}</p>
                   </div>
                 ))}
               </div>
@@ -261,40 +343,68 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Lock */}
         <button
           type="button"
-          onClick={async () => {
-            console.log('LOGOUT BUTTON CLICKED');
-            await onLockTerminal?.();
-          }}
+          onClick={async () => { await onLockTerminal?.(); }}
           title="Lock Terminal / Sign In Screen"
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-[#3d4947] hover:text-[#00685f] hover:bg-[#eefaf8] border border-[#dae2fd]/70 transition-colors cursor-pointer"
+          className="w-9 h-9 rounded-xl flex items-center justify-center border transition-colors cursor-pointer"
+          style={{ color: 'var(--nova-text-secondary)', borderColor: 'var(--nova-border)', background: 'transparent' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--nova-brand-light)'; e.currentTarget.style.color = 'var(--nova-brand)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--nova-text-secondary)'; }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
         </button>
 
-        {/* User */}
+        {/* User Menu */}
         <div ref={userMenuRef} className="relative">
-          <div onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }} className="flex items-center gap-3 pl-2 cursor-pointer group" title="User Profile Menu">
-            <img src={user.avatar || USER_PROFILE.avatar} alt={user.name} referrerPolicy="no-referrer" className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-2xs group-hover:ring-2 group-hover:ring-[#00685f]/30 transition-all" />
-            <div className="hidden sm:flex flex-col text-left"><span className="text-[13px] font-bold text-[#131b2e] leading-tight group-hover:text-[#00685f] transition-colors">{user.name}</span></div>
+          <div
+            onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }}
+            className="flex items-center gap-3 pl-2 cursor-pointer group"
+            title="User Profile Menu"
+          >
+            <img
+              src={user.avatar || USER_PROFILE.avatar}
+              alt={user.name}
+              referrerPolicy="no-referrer"
+              className="w-9 h-9 rounded-full object-cover border-2 shadow-2xs group-hover:ring-2 transition-all"
+              style={{ borderColor: 'var(--nova-border)', ringColor: 'var(--nova-brand)' }}
+            />
+            <div className="hidden sm:flex flex-col text-left">
+              <span className="text-[13px] font-bold leading-tight transition-colors" style={{ color: 'var(--nova-text-primary)' }}>{user.name}</span>
+            </div>
           </div>
           {showUserMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-white border border-[#dae2fd] rounded-2xl shadow-xl p-2 z-50">
-              <div className="px-3 py-2 border-b border-[#f0f3fd]">
-                <div className="text-[13px] font-bold text-[#131b2e]">{user.name}</div>
-                <div className="text-[11px] text-[#6d7a77]">{user.role}</div>
-                {user.email && <div className="text-[10px] text-[#00685f] font-mono mt-0.5 truncate">{user.email}</div>}
+            <div
+              className="absolute right-0 mt-2 w-56 rounded-2xl shadow-xl p-2 z-50"
+              style={{
+                background: 'var(--nova-overlay-surface)',
+                border: '1px solid var(--nova-border)',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
+              }}
+            >
+              <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--nova-divider)' }}>
+                <div className="text-[13px] font-bold" style={{ color: 'var(--nova-text-primary)' }}>{user.name}</div>
+                <div className="text-[11px]" style={{ color: 'var(--nova-text-muted)' }}>{user.role}</div>
+                {user.email && <div className="text-[10px] font-mono mt-0.5 truncate" style={{ color: 'var(--nova-brand)' }}>{user.email}</div>}
               </div>
               <div className="py-1">
-                <button onClick={() => { setShowUserMenu(false); onOpenSettings?.(); }} className="w-full text-left px-3 py-2 rounded-xl text-[12.5px] font-medium text-[#3d4947] hover:bg-[#f0f3fd] hover:text-[#131b2e] transition-colors">System Settings</button>
+                <button
+                  onClick={() => { setShowUserMenu(false); onOpenSettings?.(); }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-[12.5px] font-medium transition-colors"
+                  style={{ color: 'var(--nova-text-secondary)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--nova-dropdown-hover)'; e.currentTarget.style.color = 'var(--nova-text-primary)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--nova-text-secondary)'; }}
+                >
+                  System Settings
+                </button>
                 <button
                   type="button"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    console.log('LOGOUT BUTTON CLICKED');
-                    setShowUserMenu(false);
-                    await onLockTerminal?.();
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-[12.5px] font-medium text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-between cursor-pointer"
+                  onClick={async (e) => { e.stopPropagation(); setShowUserMenu(false); await onLockTerminal?.(); }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-[12.5px] font-medium flex items-center justify-between cursor-pointer transition-colors"
+                  style={{ color: '#ef4444' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <span>Lock Terminal / Sign Out</span>
                   <span className="text-[10px] font-mono opacity-70">ESC</span>

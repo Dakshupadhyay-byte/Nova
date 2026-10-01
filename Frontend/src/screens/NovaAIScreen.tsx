@@ -30,16 +30,19 @@ const TypingIndicator: React.FC = () => (
     <div className="shrink-0 w-8 h-8 flex items-center justify-center">
       <NovaLogo size={32} />
     </div>
-    <div className="bg-white border border-[#e2e7ff]/80 rounded-2xl rounded-tl-sm px-4 py-3 shadow-xs">
+    <div
+      className="rounded-2xl rounded-tl-sm px-4 py-3 shadow-xs"
+      style={{ background: 'var(--nova-surface-solid)', border: '1px solid var(--nova-border)' }}
+    >
       <div className="flex items-center gap-1.5">
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="w-1.5 h-1.5 bg-[#7C5CFC] rounded-full animate-bounce"
-            style={{ animationDelay: `${i * 0.18}s`, animationDuration: '0.9s' }}
+            className="w-1.5 h-1.5 rounded-full animate-bounce"
+            style={{ backgroundColor: 'var(--nova-purple)', animationDelay: `${i * 0.18}s`, animationDuration: '0.9s' }}
           />
         ))}
-        <span className="text-[12px] text-[#687573] ml-1 font-medium">NOVA is thinking…</span>
+        <span className="text-[12px] ml-1 font-medium" style={{ color: 'var(--nova-text-muted)' }}>NOVA is thinking…</span>
       </div>
     </div>
   </div>
@@ -60,10 +63,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onConfirmAction, onC
     return (
       <div className="flex justify-end">
         <div className="max-w-[78%]">
-          <div className="bg-[#00685F] text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
-            <p className="text-[14px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
+          <div className="rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm" style={{ backgroundColor: 'var(--nova-brand)' }}>
+            <p className="text-[14px] leading-relaxed whitespace-pre-wrap text-white">{message.content}</p>
           </div>
-          <p className="text-[10px] text-[#9BA8A5] mt-1 text-right pr-1">
+          <p className="text-[10px] mt-1 text-right pr-1" style={{ color: 'var(--nova-text-placeholder)' }}>
             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
@@ -77,8 +80,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onConfirmAction, onC
         <NovaLogo size={32} />
       </div>
       <div className="max-w-[78%]">
-        <div className="bg-white border border-[#e2e7ff]/80 rounded-2xl rounded-tl-sm px-4 py-3 shadow-xs">
-          <p className="text-[14px] leading-relaxed text-[#131b2e] whitespace-pre-wrap">{message.content}</p>
+        <div
+          className="rounded-2xl rounded-tl-sm px-4 py-3 shadow-xs"
+          style={{ background: 'var(--nova-surface-solid)', border: '1px solid var(--nova-border)' }}
+        >
+          <p className="text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--nova-text-primary)' }}>{message.content}</p>
 
           {/* AI Roadmap Action Confirmation Card: Single Reschedule */}
           {message.action?.type === 'RESCHEDULE_ROADMAP_DAY' && (
@@ -568,7 +574,7 @@ export const NovaAIScreen: React.FC<NovaAIScreenProps> = ({ onNavigateToRoadmap 
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#F7F9F8] relative overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden" style={{ backgroundColor: 'var(--nova-bg)' }}>
       {/* ── Ambient Background ── */}
       <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
         <div className="absolute top-0 right-0 w-[500px] h-[400px] bg-[#7C5CFC]/[0.03] blur-3xl rounded-full" />
@@ -576,20 +582,26 @@ export const NovaAIScreen: React.FC<NovaAIScreenProps> = ({ onNavigateToRoadmap 
       </div>
 
       {/* ── Page Header ── */}
-      <div className="shrink-0 px-6 py-4 border-b border-[#E5EBE9] bg-white/80 backdrop-blur-sm z-10">
+      <div
+        className="shrink-0 px-6 py-4 border-b backdrop-blur-sm z-10"
+        style={{ background: 'var(--nova-surface-elevated)', borderColor: 'var(--nova-border)' }}
+      >
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <div className="w-10 h-10 flex items-center justify-center">
             <NovaLogo size={40} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-[17px] font-bold text-[#0D2422] tracking-tight">NOVA AI</h1>
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#DDF4EF] border border-[#00685F]/20 text-[10px] font-bold text-[#00685F] tracking-wider uppercase">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00685F] animate-pulse" />
+              <h1 className="text-[17px] font-bold tracking-tight" style={{ color: 'var(--nova-text-primary)' }}>NOVA AI</h1>
+              <span
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold tracking-wider uppercase"
+                style={{ background: 'var(--nova-brand-light)', borderColor: 'var(--nova-brand-border)', color: 'var(--nova-brand)' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: 'var(--nova-brand)' }} />
                 Ready
               </span>
             </div>
-            <p className="text-[12px] text-[#687573]">Your personal focus companion</p>
+            <p className="text-[12px]" style={{ color: 'var(--nova-text-muted)' }}>Your personal focus companion</p>
           </div>
         </div>
       </div>
@@ -636,17 +648,16 @@ export const NovaAIScreen: React.FC<NovaAIScreenProps> = ({ onNavigateToRoadmap 
         </div>
       </div>
 
-      {/* ── Sticky Composer (pinned at bottom via flex) ── */}
+      {/* ── Sticky Composer ── */}
       <div className="shrink-0 relative z-20">
-        {/* Subtle fade gradient above composer */}
         <div
           className="absolute -top-8 left-0 right-0 h-8 pointer-events-none"
-          style={{ background: 'linear-gradient(to bottom, transparent, #F7F9F8)' }}
+          style={{ background: `linear-gradient(to bottom, transparent, var(--nova-bg))` }}
         />
 
-        <div className="bg-[#F7F9F8] px-4 pb-4 pt-2">
+        <div className="px-4 pb-4 pt-2" style={{ backgroundColor: 'var(--nova-bg)' }}>
           <div className="max-w-[800px] mx-auto">
-            {/* Suggested prompts — shown when there are messages */}
+            {/* Suggested prompts */}
             {hasMessages && !isLoading && (
               <div className="flex flex-wrap gap-1.5 mb-2.5 px-1">
                 {SUGGESTED_PROMPTS.slice(0, 3).map((prompt) => (
@@ -654,7 +665,10 @@ export const NovaAIScreen: React.FC<NovaAIScreenProps> = ({ onNavigateToRoadmap 
                     key={prompt}
                     onClick={() => handleSend(prompt)}
                     disabled={isLoading}
-                    className="px-2.5 py-1 rounded-lg bg-white border border-[#E5EBE9] text-[11.5px] text-[#687573] hover:border-[#7C5CFC]/40 hover:text-[#7C5CFC] hover:bg-[#f5f3ff] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-2.5 py-1 rounded-lg text-[11.5px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: 'var(--nova-surface-solid)', border: '1px solid var(--nova-border)', color: 'var(--nova-text-secondary)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--nova-purple)'; e.currentTarget.style.color = 'var(--nova-purple)'; e.currentTarget.style.background = 'var(--nova-purple-light)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--nova-border)'; e.currentTarget.style.color = 'var(--nova-text-secondary)'; e.currentTarget.style.background = 'var(--nova-surface-solid)'; }}
                   >
                     {prompt}
                   </button>
@@ -664,9 +678,11 @@ export const NovaAIScreen: React.FC<NovaAIScreenProps> = ({ onNavigateToRoadmap 
 
             {/* Composer container */}
             <div
-              className="flex items-end gap-3 bg-white border border-[#dae2fd] rounded-2xl px-4 py-3 transition-all duration-200 focus-within:border-[#7C5CFC]/50 focus-within:ring-2 focus-within:ring-[#7C5CFC]/10"
+              className="flex items-end gap-3 rounded-2xl px-4 py-3 transition-all duration-200"
               style={{
-                boxShadow: '0 -1px 12px rgba(124, 92, 252, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04)',
+                background: 'var(--nova-surface-solid)',
+                border: '1px solid var(--nova-input-border)',
+                boxShadow: '0 -1px 12px rgba(124,92,252,0.06), 0 2px 8px rgba(0,0,0,0.04)',
               }}
             >
               <textarea
@@ -677,15 +693,20 @@ export const NovaAIScreen: React.FC<NovaAIScreenProps> = ({ onNavigateToRoadmap 
                 placeholder="Ask NOVA anything…"
                 rows={1}
                 disabled={isLoading}
-                className="flex-1 resize-none bg-transparent text-[14px] text-[#131b2e] placeholder-[#9BA8A5] outline-none leading-relaxed max-h-[140px] min-h-[24px] disabled:opacity-60"
-                style={{ height: 'auto' }}
+                className="flex-1 resize-none bg-transparent text-[14px] outline-none leading-relaxed max-h-[140px] min-h-[24px] disabled:opacity-60"
+                style={{ color: 'var(--nova-text-primary)' }}
                 aria-label="Message NOVA AI"
               />
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isLoading}
                 aria-label="Send message"
-                className="shrink-0 w-9 h-9 rounded-xl bg-[#7C5CFC] hover:bg-[#6B4DE6] disabled:bg-[#dae2fd] disabled:cursor-not-allowed flex items-center justify-center transition-all duration-150 shadow-sm shadow-[#7C5CFC]/30 disabled:shadow-none"
+                className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150"
+                style={{
+                  backgroundColor: (!input.trim() || isLoading) ? 'var(--nova-surface-secondary)' : 'var(--nova-purple)',
+                  boxShadow: (!input.trim() || isLoading) ? 'none' : '0 2px 8px rgba(155,130,255,0.3)',
+                  cursor: (!input.trim() || isLoading) ? 'not-allowed' : 'pointer',
+                }}
               >
                 {isLoading ? (
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -694,7 +715,7 @@ export const NovaAIScreen: React.FC<NovaAIScreenProps> = ({ onNavigateToRoadmap 
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-[#9BA8A5] mt-2 text-center">
+            <p className="text-[10px] mt-2 text-center" style={{ color: 'var(--nova-text-placeholder)' }}>
               Enter to send · Shift + Enter for new line · NOVA AI uses your real NOVA data
             </p>
           </div>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, ArrowRight, ShieldCheck, Target, Activity, BarChart3, Clock, ChevronDown } from 'lucide-react';
+import { Sparkles, ArrowRight, ShieldCheck, Target, Activity, BarChart3, Clock, ChevronDown, Moon, Sun } from 'lucide-react';
 import { LANDING_PREVIEW, NOVA_ACRONYM, FEATURES } from '../../data/landingContent';
 import { NovaLogo } from '../../components/NovaLogo';
+import { useTheme } from '../../config/ThemeContext';
 
 // ─── Inline SVG Mini Bar Chart ────────────────────────────────────────────────
 const MiniBarChart = ({ data }: { data: number[] }) => {
@@ -178,6 +179,12 @@ export const LandingPage: React.FC = () => {
 
   const goLogin = () => navigate('/login');
 
+  const { activeTheme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(activeTheme === 'dark' ? 'light' : 'dark');
+  };
+
   const navLinks = [
     { label: 'Overview', key: 'hero' },
     { label: 'Focus', key: 'organize' },
@@ -189,7 +196,7 @@ export const LandingPage: React.FC = () => {
   const acronymActive = ['notice', 'organize', 'visualize', 'act'];
 
   return (
-    <div className="min-h-screen bg-[#F7F9F8] text-[#0D2422] font-[var(--font-manrope)] antialiased">
+    <div className="min-h-screen bg-[#F7F9F8] text-[#0D2422] font-[var(--font-manrope)] antialiased transition-colors duration-200">
       {/* ── Ambient BG ──────────────────────────────────────────────────────── */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
         <div className="absolute -top-60 left-1/2 -translate-x-1/2 w-[900px] h-[700px] rounded-full bg-[#00685F]/[0.04] blur-3xl" />
@@ -225,6 +232,15 @@ export const LandingPage: React.FC = () => {
 
           {/* CTA Buttons */}
           <div className="flex items-center gap-2">
+            {/* Quick theme toggle on landing page */}
+            <button
+              onClick={toggleTheme}
+              aria-label="Toggle dark mode"
+              title={`Switch to ${activeTheme === 'dark' ? 'light' : 'dark'} mode`}
+              className="p-2 rounded-xl border border-[#E5EBE9] hover:bg-[#F0F7F5] text-[#687573] hover:text-[#00685F] transition-all cursor-pointer"
+            >
+              {activeTheme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-[#712ae2]" />}
+            </button>
             <button onClick={goLogin}
               className="hidden sm:block px-4 py-2 text-[13.5px] font-semibold text-[#00685F] hover:bg-[#DDF4EF] rounded-lg transition-all cursor-pointer">
               Login
@@ -252,9 +268,18 @@ export const LandingPage: React.FC = () => {
                 {l.label}
               </button>
             ))}
-            <button onClick={goLogin} className="mt-2 text-left px-3 py-2.5 rounded-lg text-[14px] font-medium text-[#00685F] cursor-pointer">
-              Login
-            </button>
+            <div className="flex items-center justify-between pt-2 border-t border-[#E5EBE9] mt-2">
+              <button onClick={goLogin} className="text-left px-3 py-2 text-[14px] font-medium text-[#00685F] cursor-pointer">
+                Login
+              </button>
+              <button
+                onClick={toggleTheme}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#E5EBE9] text-[13px] font-medium text-[#687573] hover:text-[#00685F]"
+              >
+                {activeTheme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-[#712ae2]" />}
+                <span>{activeTheme === 'dark' ? 'Light' : 'Dark'}</span>
+              </button>
+            </div>
           </div>
         )}
       </nav>

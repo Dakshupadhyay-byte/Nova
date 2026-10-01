@@ -440,19 +440,30 @@ export const SimulatorScreen: React.FC<SimulatorScreenProps> = ({ onBack }) => {
               )}
 
               {/* NOVA Insight */}
-              {result.insight && (
-                <div className="bg-gradient-to-br from-[#f5f0ff] via-white to-[#e8f8f5] rounded-3xl p-5 border border-[#ddd6fe]/60 shadow-xs">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-[#7C5CFC]" />
-                    <span className="text-[11px] font-bold tracking-wider text-[#7C5CFC] uppercase font-mono">
-                      NOVA INSIGHT
-                    </span>
+              {result.insight && (() => {
+                // Defensive: if insight is unexpectedly an object (e.g. { reply, action }),
+                // extract the reply string. This prevents React error #31.
+                const raw = result.insight as unknown;
+                const insightText: string =
+                  typeof raw === 'string'
+                    ? raw
+                    : typeof (raw as any)?.reply === 'string'
+                    ? (raw as any).reply
+                    : '';
+                return insightText ? (
+                  <div className="bg-gradient-to-br from-[#f5f0ff] via-white to-[#e8f8f5] rounded-3xl p-5 border border-[#ddd6fe]/60 shadow-xs">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-4 h-4 text-[#7C5CFC]" />
+                      <span className="text-[11px] font-bold tracking-wider text-[#7C5CFC] uppercase font-mono">
+                        NOVA INSIGHT
+                      </span>
+                    </div>
+                    <p className="text-[13.5px] text-[#3d4947] leading-relaxed">
+                      {insightText}
+                    </p>
                   </div>
-                  <p className="text-[13.5px] text-[#3d4947] leading-relaxed">
-                    {result.insight}
-                  </p>
-                </div>
-              )}
+                ) : null;
+              })()}
             </>
           )}
 
