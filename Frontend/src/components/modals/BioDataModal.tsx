@@ -31,7 +31,7 @@ export const BioDataModal: React.FC<BioDataModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#f0f3fd] hover:bg-[#eaedff] flex items-center justify-center text-[#3d4947] transition-colors"
+            className="w-8 h-8 rounded-full bg-[#f0f3fd] hover:bg-[#eaedff] dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-[#3d4947] dark:text-slate-300 dark:hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

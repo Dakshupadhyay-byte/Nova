@@ -37,7 +37,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#f0f3fd] hover:bg-[#eaedff] flex items-center justify-center text-[#3d4947] transition-colors"
+            className="w-8 h-8 rounded-full bg-[#f0f3fd] hover:bg-[#eaedff] dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-[#3d4947] dark:text-slate-300 dark:hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -102,7 +102,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
         <div className="mt-6 pt-4 border-t border-[#eaedff] flex items-center justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-[13px] font-medium text-[#3d4947] hover:bg-[#f0f3fd]"
+            className="px-4 py-2 rounded-xl text-[13px] font-medium text-[#3d4947] hover:bg-[#f0f3fd] dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10"
           >
             Close
           </button>

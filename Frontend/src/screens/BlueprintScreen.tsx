@@ -630,8 +630,8 @@ export const BlueprintScreen: React.FC<BlueprintScreenProps> = ({ onOpenNovaAI }
                 disabled={isGenerating}
                 className={`py-3 px-4 rounded-xl text-[13.5px] font-bold border transition-all cursor-pointer ${
                   durationDays === days && !customDurationInput
-                    ? 'bg-[#e2f5f1] text-[#00685f] border-[#99dfd5] shadow-xs'
-                    : 'bg-white text-[#3d4947] border-[#dae2fd] hover:bg-[#faf8ff] hover:border-[#00685f]/40'
+                    ? 'bg-[#e2f5f1] text-[#00685f] border-[#99dfd5] shadow-xs dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-700/50'
+                    : 'bg-white text-[#3d4947] border-[#dae2fd] hover:bg-[#faf8ff] hover:border-[#00685f]/40 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10'
                 } disabled:opacity-60 disabled:cursor-not-allowed`}
               >
                 {days} Days

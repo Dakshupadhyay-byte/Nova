@@ -266,13 +266,13 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ focusBlocks, metri
         </div>
 
         {/* Date Range Selector: Today / Last 7 Days */}
-        <div className="flex items-center p-1 bg-[#eaedff]/70 border border-[#dae2fd]/70 rounded-full shrink-0 self-start sm:self-auto">
+        <div className="flex items-center p-1 bg-[#eaedff]/70 border border-[#dae2fd]/70 dark:bg-white/5 dark:border-white/10 rounded-full shrink-0 self-start sm:self-auto">
           <button
             onClick={() => setTimeRange('today')}
             className={`px-4 py-1.5 rounded-full text-[12.5px] font-semibold transition-all duration-150 cursor-pointer ${
               timeRange === 'today'
                 ? 'bg-[#00685f] text-white shadow-xs'
-                : 'text-[#3d4947] hover:text-[#131b2e]'
+                : 'text-[#3d4947] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white'
             }`}
           >
             Today
@@ -282,7 +282,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ focusBlocks, metri
             className={`px-4 py-1.5 rounded-full text-[12.5px] font-semibold transition-all duration-150 cursor-pointer ${
               timeRange === '7days'
                 ? 'bg-[#00685f] text-white shadow-xs'
-                : 'text-[#3d4947] hover:text-[#131b2e]'
+                : 'text-[#3d4947] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white'
             }`}
           >
             Last 7 Days
@@ -307,7 +307,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ focusBlocks, metri
         {/* Category Pills & Export */}
         <div className="flex flex-wrap sm:flex-nowrap items-center justify-between lg:justify-end gap-3 flex-1">
           {/* Category Filter Pills */}
-          <div className="flex items-center gap-1 p-1 bg-[#eaedff]/60 border border-[#dae2fd]/60 rounded-2xl overflow-x-auto">
+          <div className="flex items-center gap-1 p-1 bg-[#eaedff]/60 border border-[#dae2fd]/60 dark:bg-white/5 dark:border-white/10 rounded-2xl overflow-x-auto">
             {(['all', 'focus', 'exercise', 'sleep', 'nutrition', 'recovery'] as const).map((cat) => (
               <button
                 key={cat}
@@ -315,7 +315,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ focusBlocks, metri
                 className={`px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-all capitalize whitespace-nowrap cursor-pointer ${
                   categoryFilter === cat
                     ? 'bg-[#00685f] text-white shadow-xs'
-                    : 'text-[#3d4947] hover:text-[#131b2e]'
+                    : 'text-[#3d4947] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white'
                 }`}
               >
                 {cat}
@@ -326,7 +326,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ focusBlocks, metri
           {/* Export Button */}
           <button
             onClick={handleExportJSON}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-[#faf8ff] border border-[#dae2fd] text-[#131b2e] text-[12.5px] font-semibold transition-colors shadow-2xs cursor-pointer shrink-0"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-[#faf8ff] dark:hover:bg-white/10 border border-[#dae2fd] text-[#131b2e] text-[12.5px] font-semibold transition-colors shadow-2xs cursor-pointer shrink-0"
           >
             <Download className="w-3.5 h-3.5 text-[#00685f]" />
             <span>Export Data</span>

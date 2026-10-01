@@ -136,7 +136,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ user }) => {
             style={{
               borderColor: theme === 'light' ? 'var(--nova-brand)' : 'var(--nova-border)',
               background: theme === 'light' ? 'var(--nova-nav-active-bg)' : 'var(--nova-surface-secondary)',
-              ringColor: theme === 'light' ? 'var(--nova-brand)' : undefined,
               boxShadow: theme === 'light' ? '0 0 0 2px var(--nova-brand-border)' : 'none',
             }}
           >

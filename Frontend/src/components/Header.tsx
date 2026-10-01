@@ -294,7 +294,7 @@ export const Header: React.FC<HeaderProps> = ({
             {unreadCount > 0 && (
               <span
                 className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full ring-2"
-                style={{ background: 'var(--nova-purple)', ringColor: 'var(--nova-surface-solid)' }}
+                style={{ background: 'var(--nova-purple)', boxShadow: '0 0 0 2px var(--nova-surface-solid)' }}
               />
             )}
           </button>
@@ -368,7 +368,7 @@ export const Header: React.FC<HeaderProps> = ({
               alt={user.name}
               referrerPolicy="no-referrer"
               className="w-9 h-9 rounded-full object-cover border-2 shadow-2xs group-hover:ring-2 transition-all"
-              style={{ borderColor: 'var(--nova-border)', ringColor: 'var(--nova-brand)' }}
+              style={{ borderColor: 'var(--nova-border)' }}
             />
             <div className="hidden sm:flex flex-col text-left">
               <span className="text-[13px] font-bold leading-tight transition-colors" style={{ color: 'var(--nova-text-primary)' }}>{user.name}</span>

@@ -224,7 +224,7 @@ export const LandingPage: React.FC = () => {
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map(l => (
               <button key={l.key} onClick={() => scrollTo(l.key)}
-                className={`px-3.5 py-2 rounded-lg text-[13.5px] font-medium transition-all cursor-pointer ${activeSection === l.key ? 'text-[#00685F] bg-[#DDF4EF]' : 'text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5]'}`}>
+                className={`px-3.5 py-2 rounded-lg text-[13.5px] font-medium transition-all cursor-pointer ${activeSection === l.key ? 'text-[#00685F] bg-[#DDF4EF]' : 'text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5] dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10'}`}>
                 {l.label}
               </button>
             ))}
@@ -237,7 +237,7 @@ export const LandingPage: React.FC = () => {
               onClick={toggleTheme}
               aria-label="Toggle dark mode"
               title={`Switch to ${activeTheme === 'dark' ? 'light' : 'dark'} mode`}
-              className="p-2 rounded-xl border border-[#E5EBE9] hover:bg-[#F0F7F5] text-[#687573] hover:text-[#00685F] transition-all cursor-pointer"
+              className="p-2 rounded-xl border border-[#E5EBE9] hover:bg-[#F0F7F5] text-[#687573] hover:text-[#00685F] dark:text-slate-300 dark:hover:text-teal-300 dark:hover:bg-white/10 transition-all cursor-pointer"
             >
               {activeTheme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-[#712ae2]" />}
             </button>
@@ -250,7 +250,7 @@ export const LandingPage: React.FC = () => {
               Get Started <ArrowRight className="w-3.5 h-3.5" />
             </button>
             {/* Mobile menu toggle */}
-            <button onClick={() => setMobileMenu(m => !m)} className="md:hidden p-2 rounded-lg hover:bg-[#F0F7F5] cursor-pointer text-[#687573]">
+            <button onClick={() => setMobileMenu(m => !m)} className="md:hidden p-2 rounded-lg hover:bg-[#F0F7F5] cursor-pointer text-[#687573] dark:text-slate-300">
               <div className="w-5 flex flex-col gap-1.5">
                 <span className={`h-0.5 bg-current rounded transition-all ${mobileMenu ? 'rotate-45 translate-y-2' : ''}`} />
                 <span className={`h-0.5 bg-current rounded transition-all ${mobileMenu ? 'opacity-0' : ''}`} />
@@ -264,7 +264,7 @@ export const LandingPage: React.FC = () => {
           <div className="md:hidden bg-white border-t border-[#E5EBE9] px-6 py-4 flex flex-col gap-1">
             {navLinks.map(l => (
               <button key={l.key} onClick={() => scrollTo(l.key)}
-                className="text-left px-3 py-2.5 rounded-lg text-[14px] font-medium text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5] cursor-pointer transition-all">
+                className="text-left px-3 py-2.5 rounded-lg text-[14px] font-medium text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5] dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10 cursor-pointer transition-all">
                 {l.label}
               </button>
             ))}
@@ -274,7 +274,7 @@ export const LandingPage: React.FC = () => {
               </button>
               <button
                 onClick={toggleTheme}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#E5EBE9] text-[13px] font-medium text-[#687573] hover:text-[#00685F]"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#E5EBE9] text-[13px] font-medium text-[#687573] hover:text-[#00685F] dark:text-slate-300 dark:hover:text-teal-300"
               >
                 {activeTheme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-[#712ae2]" />}
                 <span>{activeTheme === 'dark' ? 'Light' : 'Dark'}</span>
@@ -306,19 +306,19 @@ export const LandingPage: React.FC = () => {
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-300 cursor-pointer w-full text-left group ${
                   isActive
                     ? 'bg-[#DDF4EF] text-[#00685F] shadow-xs'
-                    : 'text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5]'
+                    : 'text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5] dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10'
                 }`}
               >
                 <span
                   className={`w-6 h-6 rounded-lg flex items-center justify-center text-[12px] font-bold transition-all duration-300 ${
                     isActive
                       ? 'bg-[#00685F] text-white shadow-xs scale-105'
-                      : 'bg-[#E5EBE9]/70 text-[#687573] group-hover:bg-[#E5EBE9] group-hover:text-[#0D2422]'
+                      : 'bg-[#E5EBE9]/70 text-[#687573] group-hover:bg-[#E5EBE9] group-hover:text-[#0D2422] dark:bg-white/10 dark:text-slate-300 dark:group-hover:text-white'
                   }`}
                 >
                   {item.letter}
                 </span>
-                <span className={`tracking-tight transition-colors ${isActive ? 'text-[#00685F] font-bold' : 'text-[#687573] group-hover:text-[#0D2422]'}`}>
+                <span className={`tracking-tight transition-colors ${isActive ? 'text-[#00685F] font-bold' : 'text-[#687573] group-hover:text-[#0D2422] dark:text-slate-300 dark:group-hover:text-white'}`}>
                   {item.word}
                 </span>
               </button>
@@ -342,7 +342,7 @@ export const LandingPage: React.FC = () => {
               className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold transition-all duration-300 cursor-pointer ${
                 isActive
                   ? 'bg-[#00685F] text-white shadow-sm scale-105'
-                  : 'text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5]'
+                  : 'text-[#687573] hover:text-[#0D2422] hover:bg-[#F0F7F5] dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10'
               }`}
             >
               {item.letter}

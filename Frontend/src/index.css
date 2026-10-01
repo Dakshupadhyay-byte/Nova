@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 @layer base {
   :root {
@@ -20,7 +20,7 @@
     --z-modal: 50;
     --z-overlay: 60;
 
-    /* LIGHT THEME */
+    /* ─── LIGHT THEME TOKENS ─── */
     --nova-bg: #f7f9f8;
     --nova-surface: rgba(255,255,255,0.85);
     --nova-surface-solid: #ffffff;
@@ -89,7 +89,7 @@
     --nova-overlay-surface: #ffffff;
     --nova-divider: #f0f3fd;
 
-    /* Backward compat */
+    /* Backward compatibility tokens */
     --color-bg-app: #f7f9f8;
     --color-surface: rgba(255,255,255,0.82);
     --color-surface-elevated: rgba(255,255,255,0.94);
@@ -107,92 +107,92 @@
     --color-accent-purple-light: #f4f0ff;
   }
 
-  .dark {
-    /* DARK THEME */
-    --nova-bg: #0b1110;
-    --nova-surface: rgba(17,26,24,0.92);
-    --nova-surface-solid: #111a18;
-    --nova-surface-elevated: rgba(20,30,28,0.98);
-    --nova-surface-muted: rgba(23,34,31,0.85);
-    --nova-surface-secondary: #17221f;
-    --nova-border: rgba(38,54,50,0.9);
-    --nova-border-subtle: rgba(38,54,50,0.55);
-    --nova-border-active: rgba(43,183,167,0.5);
-    --nova-text-primary: #f2f7f5;
-    --nova-text-secondary: #b8c9c5;
-    --nova-text-muted: #7a9490;
-    --nova-text-placeholder: #4e6460;
-    --nova-brand: #2bb7a7;
-    --nova-brand-hover: #39c8b7;
-    --nova-brand-light: #0e2b26;
-    --nova-brand-border: #1f4f48;
-    --nova-brand-soft: #112421;
-    --nova-purple: #9b82ff;
-    --nova-purple-light: #1a1433;
-    --nova-purple-border: #3a2870;
-    --nova-input-bg: rgba(23,34,31,0.9);
-    --nova-input-bg-focus: #1a2a27;
-    --nova-input-border: #263632;
-    --nova-card-bg: rgba(17,26,24,0.88);
-    --nova-card-border: rgba(38,54,50,0.75);
-    --nova-notif-unread-bg: #14211e;
-    --nova-notif-read-bg: #0f1a18;
-    --nova-scrollbar: rgba(43,183,167,0.2);
-    --nova-scrollbar-hover: rgba(43,183,167,0.45);
-    --nova-sidebar-bg: rgba(14,21,20,0.95);
-    --nova-sidebar-border: rgba(38,54,50,0.8);
-    --nova-nav-active-bg: rgba(43,183,167,0.14);
-    --nova-nav-active-text: #2bb7a7;
-    --nova-nav-text: #b8c9c5;
-    --nova-nav-muted: #7a9490;
-    --nova-dropdown-hover: #17221f;
-    --nova-search-selected: #112824;
-    --nova-search-hover: #14201e;
-    --nova-icon-bg: #17221f;
-    --nova-icon-border: #263632;
-    --nova-icon-active-bg: #1a2e2a;
-    --nova-icon-active-border: #1f4f48;
-    --nova-chart-grid: rgba(38,54,50,0.6);
-    --nova-chart-text: #7a9490;
-    --nova-chart-tooltip-bg: #17221f;
-    --nova-skeleton-from: #17221f;
-    --nova-skeleton-to: #1f3029;
-    --nova-header-bg-scrolled: rgba(13,20,18,0.97);
-    --nova-header-bg: rgba(11,17,16,0.8);
-    --nova-header-border: rgba(38,54,50,1);
-    --nova-wearable-active-bg: #0f1f1c;
-    --nova-wearable-active-border: #1f4f48;
-    --nova-wearable-inactive-bg: #0b1713;
-    --nova-wearable-inactive-border: rgba(38,54,50,1);
-    --nova-badge-green-bg: #0e2b26;
-    --nova-badge-green-text: #2bb7a7;
-    --nova-badge-purple-bg: #1a1433;
-    --nova-badge-purple-text: #9b82ff;
-    --nova-timer-bg: rgba(17,26,24,0.95);
-    --nova-timer-ring: #0e2b26;
-    --nova-landing-bg: #0b1110;
-    --nova-landing-surface: #111a18;
-    --nova-landing-navbar-bg: rgba(11,17,16,0.92);
-    --nova-modal-overlay: rgba(0,0,0,0.65);
-    --nova-overlay-surface: #111a18;
-    --nova-divider: #17221f;
+  /* ─── DARK THEME TOKENS (Strictly scoped to dark state) ─── */
+  :is(.dark, html.dark, body.dark, [data-theme="dark"]) {
+    --nova-bg: #0b111e;
+    --nova-surface: rgba(19, 27, 46, 0.88);
+    --nova-surface-solid: #131b2e;
+    --nova-surface-elevated: rgba(26, 36, 62, 0.95);
+    --nova-surface-muted: rgba(30, 42, 70, 0.75);
+    --nova-surface-secondary: #162035;
+    --nova-border: rgba(45, 58, 88, 0.85);
+    --nova-border-subtle: rgba(45, 58, 88, 0.55);
+    --nova-border-active: rgba(0, 163, 148, 0.55);
+    --nova-text-primary: #f1f5f9;
+    --nova-text-secondary: #cbd5e1;
+    --nova-text-muted: #94a3b8;
+    --nova-text-placeholder: #64748b;
+    --nova-brand: #00a394;
+    --nova-brand-hover: #2bb7a7;
+    --nova-brand-light: rgba(0, 104, 95, 0.28);
+    --nova-brand-border: rgba(0, 163, 148, 0.45);
+    --nova-brand-soft: rgba(0, 104, 95, 0.18);
+    --nova-purple: #9d68fc;
+    --nova-purple-light: rgba(113, 42, 226, 0.22);
+    --nova-purple-border: rgba(157, 104, 252, 0.4);
+    --nova-input-bg: rgba(26, 36, 62, 0.85);
+    --nova-input-bg-focus: #172036;
+    --nova-input-border: rgba(45, 58, 88, 0.9);
+    --nova-card-bg: rgba(19, 27, 46, 0.88);
+    --nova-card-border: rgba(45, 58, 88, 0.75);
+    --nova-notif-unread-bg: rgba(26, 36, 62, 0.95);
+    --nova-notif-read-bg: rgba(19, 27, 46, 0.7);
+    --nova-scrollbar: rgba(0, 163, 148, 0.25);
+    --nova-scrollbar-hover: rgba(0, 163, 148, 0.5);
+    --nova-sidebar-bg: rgba(14, 21, 37, 0.94);
+    --nova-sidebar-border: rgba(45, 58, 88, 0.8);
+    --nova-nav-active-bg: rgba(0, 163, 148, 0.16);
+    --nova-nav-active-text: #00a394;
+    --nova-nav-text: #cbd5e1;
+    --nova-nav-muted: #94a3b8;
+    --nova-dropdown-hover: rgba(32, 44, 76, 0.85);
+    --nova-search-selected: rgba(0, 104, 95, 0.25);
+    --nova-search-hover: rgba(26, 36, 62, 0.8);
+    --nova-icon-bg: rgba(26, 36, 62, 0.75);
+    --nova-icon-border: rgba(45, 58, 88, 0.8);
+    --nova-icon-active-bg: rgba(0, 104, 95, 0.3);
+    --nova-icon-active-border: rgba(0, 163, 148, 0.5);
+    --nova-chart-grid: rgba(45, 58, 88, 0.6);
+    --nova-chart-text: #94a3b8;
+    --nova-chart-tooltip-bg: #151e33;
+    --nova-skeleton-from: #172036;
+    --nova-skeleton-to: #222e4d;
+    --nova-header-bg-scrolled: rgba(11, 17, 30, 0.95);
+    --nova-header-bg: rgba(11, 17, 30, 0.8);
+    --nova-header-border: rgba(45, 58, 88, 0.85);
+    --nova-wearable-active-bg: rgba(0, 104, 95, 0.2);
+    --nova-wearable-active-border: rgba(0, 163, 148, 0.5);
+    --nova-wearable-inactive-bg: rgba(19, 27, 46, 0.6);
+    --nova-wearable-inactive-border: rgba(45, 58, 88, 0.8);
+    --nova-badge-green-bg: rgba(0, 104, 95, 0.25);
+    --nova-badge-green-text: #00a394;
+    --nova-badge-purple-bg: rgba(113, 42, 226, 0.22);
+    --nova-badge-purple-text: #9d68fc;
+    --nova-timer-bg: rgba(19, 27, 46, 0.92);
+    --nova-timer-ring: rgba(0, 104, 95, 0.25);
+    --nova-landing-bg: #0b111e;
+    --nova-landing-surface: #131b2e;
+    --nova-landing-navbar-bg: rgba(11, 17, 30, 0.92);
+    --nova-modal-overlay: rgba(3, 7, 18, 0.7);
+    --nova-overlay-surface: #151e33;
+    --nova-divider: rgba(45, 58, 88, 0.6);
 
-    /* Backward compat */
-    --color-bg-app: #0b1110;
-    --color-surface: rgba(17,26,24,0.92);
-    --color-surface-elevated: rgba(20,30,28,0.98);
-    --color-surface-muted: rgba(23,34,31,0.85);
-    --color-border-subtle: rgba(38,54,50,0.9);
-    --color-border-active: rgba(43,183,167,0.5);
-    --color-brand-primary: #2bb7a7;
-    --color-brand-primary-hover: #39c8b7;
-    --color-teal-light: #0e2b26;
-    --color-teal-border: #1f4f48;
-    --color-text-primary: #f2f7f5;
-    --color-text-secondary: #b8c9c5;
-    --color-text-muted: #7a9490;
-    --color-accent-purple: #9b82ff;
-    --color-accent-purple-light: #1a1433;
+    /* Backward compatibility tokens */
+    --color-bg-app: #0b111e;
+    --color-surface: rgba(19, 27, 46, 0.88);
+    --color-surface-elevated: rgba(26, 36, 62, 0.95);
+    --color-surface-muted: rgba(30, 42, 70, 0.75);
+    --color-border-subtle: rgba(45, 58, 88, 0.85);
+    --color-border-active: rgba(0, 163, 148, 0.55);
+    --color-brand-primary: #00a394;
+    --color-brand-primary-hover: #2bb7a7;
+    --color-teal-light: rgba(0, 104, 95, 0.28);
+    --color-teal-border: rgba(0, 163, 148, 0.45);
+    --color-text-primary: #f1f5f9;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #94a3b8;
+    --color-accent-purple: #9d68fc;
+    --color-accent-purple-light: rgba(113, 42, 226, 0.22);
   }
 
   body {
@@ -218,16 +218,13 @@ img, video, canvas, svg, [data-no-transition],
   transition: none !important;
 }
 
-/* Glass system */
+/* ─── Global Glass System (Light Mode Base) ─── */
 .glass-panel {
   background: var(--nova-surface) !important;
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid var(--nova-border) !important;
   box-shadow: 0 8px 32px -4px rgba(0,104,95,0.05), 0 2px 8px -1px rgba(19,27,46,0.03), inset 0 1px 0 0 rgba(255,255,255,0.08) !important;
-}
-.dark .glass-panel {
-  box-shadow: 0 8px 32px -4px rgba(0,0,0,0.3), 0 2px 8px -1px rgba(0,0,0,0.2), inset 0 1px 0 0 rgba(255,255,255,0.03) !important;
 }
 .glass-panel-interactive {
   background: var(--nova-surface) !important;
@@ -243,9 +240,6 @@ img, video, canvas, svg, [data-no-transition],
   border-color: var(--nova-border-active) !important;
   box-shadow: 0 16px 40px -6px rgba(0,104,95,0.12), 0 6px 16px -2px rgba(19,27,46,0.06), inset 0 1px 0 0 rgba(255,255,255,0.1) !important;
 }
-.dark .glass-panel-interactive:hover {
-  box-shadow: 0 16px 40px -6px rgba(0,0,0,0.4), 0 6px 16px -2px rgba(0,0,0,0.25), inset 0 1px 0 0 rgba(255,255,255,0.04) !important;
-}
 .glass-subtle {
   background: var(--nova-surface-muted) !important;
   backdrop-filter: blur(12px) saturate(160%);
@@ -259,9 +253,6 @@ img, video, canvas, svg, [data-no-transition],
   border: 1px solid var(--nova-border) !important;
   box-shadow: 0 12px 40px -6px rgba(0,104,95,0.08), inset 0 1px 0 0 rgba(255,255,255,0.08) !important;
 }
-.dark .glass-strong {
-  box-shadow: 0 12px 40px -6px rgba(0,0,0,0.4), inset 0 1px 0 0 rgba(255,255,255,0.03) !important;
-}
 
 /* bg-white theme adaptation */
 .bg-white {
@@ -271,14 +262,11 @@ img, video, canvas, svg, [data-no-transition],
   box-shadow: 0 4px 24px -2px rgba(0,104,95,0.04), inset 0 1px 0 0 rgba(255,255,255,0.08);
   transition: transform 0.2s var(--ease-out-smooth), box-shadow 0.2s var(--ease-out-smooth), border-color 0.2s var(--ease-out-smooth), background-color 0.2s ease;
 }
-.dark .bg-white {
-  box-shadow: 0 4px 24px -2px rgba(0,0,0,0.3), inset 0 1px 0 0 rgba(255,255,255,0.03);
-}
 .bg-white:hover {
   border-color: var(--nova-border-active);
 }
 
-/* Modals & Dropdowns — solid surface */
+/* Modals & Dropdowns in light mode */
 .z-50 .bg-white,
 .z-\[50\] .bg-white,
 .z-\[40\] .bg-white,
@@ -298,7 +286,7 @@ img, video, canvas, svg, [data-no-transition],
   }
 }
 
-/* Page transitions */
+/* ─── Page Transitions ─── */
 .page-fade-in {
   animation: fadeInPage 0.22s var(--ease-out-smooth) forwards;
 }
@@ -322,7 +310,7 @@ img, video, canvas, svg, [data-no-transition],
   }
 }
 
-/* Buttons */
+/* ─── Buttons ─── */
 .nova-btn-primary {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
   padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 600;
@@ -371,7 +359,7 @@ img, video, canvas, svg, [data-no-transition],
   color: var(--nova-text-primary) !important;
 }
 
-/* Input */
+/* ─── Inputs ─── */
 .nova-input {
   width: 100%; padding: 0.625rem 1rem; font-size: 0.875rem;
   color: var(--nova-text-primary);
@@ -388,9 +376,8 @@ img, video, canvas, svg, [data-no-transition],
   border-color: var(--nova-brand);
   box-shadow: 0 0 0 3px rgba(0,104,95,0.18);
 }
-.dark .nova-input:focus { box-shadow: 0 0 0 3px rgba(43,183,167,0.2); }
 
-/* Skeleton */
+/* ─── Skeleton ─── */
 .nova-skeleton {
   background: linear-gradient(90deg, var(--nova-skeleton-from) 25%, var(--nova-skeleton-to) 37%, var(--nova-skeleton-from) 63%);
   background-size: 400% 100%;
@@ -402,232 +389,512 @@ img, video, canvas, svg, [data-no-transition],
   100% { background-position: 0 50%; }
 }
 
-/* Scrollbar */
+/* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--nova-scrollbar); border-radius: 9999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--nova-scrollbar-hover); }
 
-/* Selects in dark mode */
-.dark select, .dark select option {
-  background-color: var(--nova-surface-solid);
-  color: var(--nova-text-primary);
+/* ==========================================================================
+   DARK MODE OVERRIDES (Strictly scoped to .dark or [data-theme="dark"])
+   NO rule below will EVER execute when Light Mode is selected.
+   ========================================================================== */
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .glass-panel {
+  box-shadow: 0 8px 32px -4px rgba(0,0,0,0.4), 0 2px 8px -1px rgba(0,0,0,0.2), inset 0 1px 0 0 rgba(255,255,255,0.04) !important;
 }
-.dark input[type="time"], .dark input[type="range"] {
-  background-color: var(--nova-input-bg);
-  color: var(--nova-text-primary);
-  border-color: var(--nova-input-border);
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .glass-panel-interactive:hover {
+  box-shadow: 0 16px 40px -6px rgba(0,0,0,0.55), 0 6px 16px -2px rgba(0,0,0,0.3), inset 0 1px 0 0 rgba(255,255,255,0.06) !important;
 }
-.dark *:focus-visible { outline-color: var(--nova-brand); }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   NOVA DARK MODE — GLOBAL COMPONENT OVERRIDES
-   These rules cascade from .dark on <html> and override Tailwind classes.
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* ── App Shell background ─────────────────────────────────────────── */
-.dark .h-screen.bg-\[\#faf8ff\] { background-color: var(--nova-bg) !important; }
-.dark .min-h-screen.bg-\[\#faf8ff\] { background-color: var(--nova-bg) !important; }
-
-/* ── Background mesh gradients — tone them for dark ──────────────── */
-.dark .from-\[\#00685f\]\/15 { --tw-gradient-from: rgba(43,183,167,0.08) !important; }
-.dark .from-\[\#712ae2\]\/12 { --tw-gradient-from: rgba(155,130,255,0.06) !important; }
-
-/* ── Generic white/light backgrounds → dark surfaces ─────────────── */
-.dark .bg-\[\#faf8ff\]   { background-color: var(--nova-bg) !important; }
-.dark .bg-\[\#f7f9f8\]   { background-color: var(--nova-bg) !important; }
-.dark .bg-\[\#F7F9F8\]   { background-color: var(--nova-bg) !important; }
-.dark .bg-\[\#f1f5f4\]   { background-color: var(--nova-surface-secondary) !important; }
-.dark .bg-\[\#f4f7ff\]   { background-color: var(--nova-surface-muted) !important; }
-.dark .bg-\[\#f0f3fd\]   { background-color: var(--nova-surface-muted) !important; }
-.dark .bg-\[\#f8f9fc\]   { background-color: var(--nova-surface-muted) !important; }
-
-/* ── Text colors ─────────────────────────────────────────────────── */
-.dark .text-\[\#131b2e\]    { color: var(--nova-text-primary) !important; }
-.dark .text-\[\#0D2422\]    { color: var(--nova-text-primary) !important; }
-.dark .text-\[\#1f2937\]    { color: var(--nova-text-primary) !important; }
-.dark .text-\[\#1e293b\]    { color: var(--nova-text-primary) !important; }
-.dark .text-\[\#3d4947\]    { color: var(--nova-text-secondary) !important; }
-.dark .text-\[\#687573\]    { color: var(--nova-text-secondary) !important; }
-.dark .text-\[\#6d7a77\]    { color: var(--nova-text-muted) !important; }
-.dark .text-\[\#9BA8A5\]    { color: var(--nova-text-placeholder) !important; }
-.dark .text-\[\#9ba8a5\]    { color: var(--nova-text-placeholder) !important; }
-
-/* ── Brand color overrides for dark ──────────────────────────────── */
-.dark .text-\[\#00685f\]    { color: var(--nova-brand) !important; }
-.dark .text-\[\#00685F\]    { color: var(--nova-brand) !important; }
-.dark .text-\[\#008378\]    { color: var(--nova-brand) !important; }
-
-/* ── Border colors ───────────────────────────────────────────────── */
-.dark .border-\[\#dae2fd\]      { border-color: var(--nova-border) !important; }
-.dark .border-\[\#dae2fd\]\/80  { border-color: var(--nova-border) !important; }
-.dark .border-\[\#dae2fd\]\/90  { border-color: var(--nova-border) !important; }
-.dark .border-\[\#e2e7ff\]      { border-color: var(--nova-border) !important; }
-.dark .border-\[\#eaedff\]      { border-color: var(--nova-border) !important; }
-.dark .border-\[\#f0f3fd\]      { border-color: var(--nova-divider) !important; }
-.dark .border-\[\#E5EBE9\]      { border-color: var(--nova-border) !important; }
-.dark .border-\[\#e5e7eb\]      { border-color: var(--nova-border) !important; }
-.dark .border-\[\#99dfd5\]      { border-color: var(--nova-brand-border) !important; }
-.dark .border-\[\#b2e7df\]      { border-color: var(--nova-brand-border) !important; }
-.dark .border-t-\[\#00685F\]    { border-top-color: var(--nova-brand) !important; }
-
-/* ── Surface card backgrounds ────────────────────────────────────── */
-.dark .bg-white\/95           { background-color: var(--nova-surface-elevated) !important; }
-.dark .bg-white\/80           { background-color: var(--nova-surface) !important; }
-.dark .bg-white\/65           { background-color: rgba(17,26,24,0.75) !important; }
-.dark .bg-white\/94           { background-color: var(--nova-header-bg-scrolled) !important; }
-.dark .bg-\[\#faf8ff\]        { background-color: var(--nova-notif-read-bg) !important; }
-
-/* Cards with white border */
-.dark .border-\[\#dae2fd\]\/90 { border-color: var(--nova-border) !important; }
-
-/* ── Brand light backgrounds → dark tint ─────────────────────────── */
-.dark .bg-\[\#e2f5f1\]      { background-color: var(--nova-brand-light) !important; }
-.dark .bg-\[\#eefaf8\]      { background-color: var(--nova-brand-soft) !important; }
-.dark .bg-\[\#DDF4EF\]      { background-color: var(--nova-brand-light) !important; }
-.dark .bg-\[\#e6f7f4\]      { background-color: var(--nova-brand-light) !important; }
-
-/* ── Purple light backgrounds → dark tint ────────────────────────── */
-.dark .bg-\[\#f4f0ff\]      { background-color: var(--nova-purple-light) !important; }
-.dark .bg-\[\#f5f3ff\]      { background-color: var(--nova-purple-light) !important; }
-.dark .bg-\[\#1a1433\]      { background-color: var(--nova-purple-light) !important; }
-
-/* ── Primary buttons — lighter teal for dark ──────────────────────── */
-.dark .bg-\[\#00685f\]  { background-color: var(--nova-brand) !important; }
-.dark .bg-\[\#00685F\]  { background-color: var(--nova-brand) !important; }
-.dark .hover\:bg-\[\#005049\]:hover { background-color: var(--nova-brand-hover) !important; }
-.dark .hover\:bg-\[\#00524b\]:hover { background-color: var(--nova-brand-hover) !important; }
-
-/* ── Input backgrounds ───────────────────────────────────────────── */
-.dark input[type="text"],
-.dark input[type="number"],
-.dark input[type="email"],
-.dark input[type="password"],
-.dark input[type="search"],
-.dark input[type="time"],
-.dark textarea,
-.dark select {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .glass-strong {
+  box-shadow: 0 12px 40px -6px rgba(0,0,0,0.45), inset 0 1px 0 0 rgba(255,255,255,0.04) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white {
+  box-shadow: 0 4px 24px -2px rgba(0,0,0,0.35), inset 0 1px 0 0 rgba(255,255,255,0.04);
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .nova-input:focus {
+  box-shadow: 0 0 0 3px rgba(0,163,148,0.25);
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) select,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) select option {
+  background-color: var(--nova-surface-solid) !important;
+  color: var(--nova-text-primary) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) input[type="time"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) input[type="range"] {
   background-color: var(--nova-input-bg) !important;
   color: var(--nova-text-primary) !important;
   border-color: var(--nova-input-border) !important;
 }
-.dark input::placeholder,
-.dark textarea::placeholder {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) *:focus-visible {
+  outline-color: var(--nova-brand);
+}
+
+/* ── App Shell & Page Backgrounds ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .h-screen.bg-\[\#faf8ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .min-h-screen.bg-\[\#faf8ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .min-h-screen.bg-\[\#F7F9F8\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) div.bg-\[\#F7F9F8\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) main.bg-\[\#faf8ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) body.bg-\[\#faf8ff\] {
+  background-color: var(--nova-bg) !important;
+}
+
+/* ── Ambient Mesh Gradients in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .from-\[\#00685f\]\/15 {
+  --tw-gradient-from: rgba(0,163,148,0.08) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .from-\[\#712ae2\]\/12 {
+  --tw-gradient-from: rgba(157,104,252,0.06) !important;
+}
+
+/* ── Generic Neutral Backgrounds → Dark Surfaces ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#faf8ff\]   { background-color: var(--nova-bg) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f7f9f8\]   { background-color: var(--nova-bg) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#F7F9F8\]   { background-color: var(--nova-bg) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f1f5f4\]   { background-color: var(--nova-surface-secondary) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#F0F5F4\]   { background-color: var(--nova-surface-secondary) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f8fafc\]   { background-color: var(--nova-surface-secondary) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f8f9fc\]   { background-color: var(--nova-surface-muted) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f8faff\]   { background-color: var(--nova-surface-muted) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f1f5f9\]   { background-color: var(--nova-surface-muted) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f4f7ff\]   { background-color: var(--nova-surface-muted) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f0f3fd\]   { background-color: var(--nova-surface-muted) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f0f2fd\]   { background-color: var(--nova-surface-muted) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eaedff\]   { background-color: var(--nova-surface-muted) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#E5EBE9\]   { background-color: var(--nova-surface-muted) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-gray-100       { background-color: var(--nova-surface-muted) !important; }
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .hover\:bg-\[\#faf8ff\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .hover\:bg-\[\#f4f7ff\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .hover\:bg-\[\#f0f3fd\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .hover\:bg-\[\#F0F7F5\]:hover {
+  background-color: var(--nova-dropdown-hover) !important;
+}
+
+/* ── Text Colors in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#131b2e\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#0D2422\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#0f172a\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#1e293b\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#1f2937\] {
+  color: var(--nova-text-primary) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#3d4947\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#44474f\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#475569\] {
+  color: var(--nova-text-secondary) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#687573\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#6d7a77\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#64748b\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#9BA8A5\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#9ba8a5\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#adb5bd\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-gray-600 {
+  color: var(--nova-text-muted) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#00685f\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#00685F\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#008378\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#005048\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#004D45\] {
+  color: var(--nova-brand) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#712ae2\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#7C5CFC\] {
+  color: var(--nova-purple) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#854d0e\] {
+  color: #fde047 !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-emerald-700,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-emerald-800 {
+  color: #34d399 !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-orange-700 {
+  color: #fb923c !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-blue-700 {
+  color: #38bdf8 !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-red-700,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-red-800,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-rose-700,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-rose-800,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .text-\[\#b91c1c\] {
+  color: #f87171 !important;
+}
+
+/* ── Border Colors in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#dae2fd\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#dae2fd\]\/80,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#dae2fd\]\/90,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#e2e7ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#eaedff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#f0f3fd\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#f0f2fd\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#E5EBE9\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#e5ebe9\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#e5e7eb\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#d9dcf5\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#F0F5F4\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-gray-200 {
+  border-color: var(--nova-border) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#99dfd5\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#b2e7df\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#a2e3d9\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#DDF4EF\] {
+  border-color: var(--nova-brand-border) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-t-\[\#00685F\] {
+  border-top-color: var(--nova-brand) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#ddd6fe\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#c4b5fd\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#d8b4fe\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#e9d8fd\] {
+  border-color: var(--nova-purple-border) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#bae6fd\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#7dd3fc\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-blue-200 {
+  border-color: rgba(14, 165, 233, 0.4) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#fde68a\] {
+  border-color: rgba(234, 179, 8, 0.4) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#fecdd3\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#fee2e2\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-red-100,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-red-200,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-rose-100,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-rose-200 {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-emerald-200 {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-orange-200 {
+  border-color: rgba(249, 115, 22, 0.4) !important;
+}
+
+/* ── Surface Card Backgrounds ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white\/95 {
+  background-color: var(--nova-surface-elevated) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white\/80 {
+  background-color: var(--nova-surface) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white\/70 {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white\/65 {
+  background-color: rgba(11, 17, 30, 0.75) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white\/94,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white\/90 {
+  background-color: var(--nova-header-bg-scrolled) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white {
+  background-color: var(--nova-card-bg) !important;
+}
+
+/* ── Tinted Backgrounds (Teal / Purple / Sky / Alerts) ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#e2f5f1\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eefaf8\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#DDF4EF\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#e6f7f4\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f0faf7\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#d8f5ef\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#cbeee7\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#e0f5f0\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#F0F7F5\] {
+  background-color: var(--nova-brand-light) !important;
+  border-color: var(--nova-brand-border) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f4f0ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f5f3ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f5f0ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f4effe\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f8f5ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f3e8ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#ede9fe\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eedcfd\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#1a1433\] {
+  background-color: var(--nova-purple-light) !important;
+  border-color: var(--nova-purple-border) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#e0f2fe\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eff6ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eef5ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f0f9ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-blue-50 {
+  background-color: rgba(2, 132, 199, 0.22) !important;
+  border-color: rgba(14, 165, 233, 0.4) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-emerald-50,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-orange-50 {
+  background-color: rgba(249, 115, 22, 0.2) !important;
+  border-color: rgba(249, 115, 22, 0.4) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-red-50,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-rose-50,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#ffe4e6\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#ffebeb\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#fff1f2\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#fff5f5\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#fffbfb\] {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#fef9c3\] {
+  background-color: rgba(234, 179, 8, 0.2) !important;
+  border-color: rgba(234, 179, 8, 0.4) !important;
+}
+
+/* ── Gradients ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .from-\[\#f5f0ff\] {
+  --tw-gradient-from: #1c1b36 !important;
+  --tw-gradient-to: rgba(28, 27, 54, 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .via-\[\#eef5ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .via-white {
+  --tw-gradient-via: #141f36 !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .to-\[\#e8f8f5\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .to-\[\#eef5ff\] {
+  --tw-gradient-to: #0f2429 !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .from-\[\#faf8ff\] {
+  --tw-gradient-from: var(--nova-bg) !important;
+  --tw-gradient-to: rgba(11, 17, 30, 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+/* ── Primary Buttons in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#00685f\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#00685F\] {
+  background-color: var(--nova-brand) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .hover\:bg-\[\#005049\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .hover\:bg-\[\#00524b\]:hover {
+  background-color: var(--nova-brand-hover) !important;
+}
+
+/* ── Inputs in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) input[type="text"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) input[type="number"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) input[type="email"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) input[type="password"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) input[type="search"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) input[type="time"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) textarea,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) select {
+  background-color: var(--nova-input-bg) !important;
+  color: var(--nova-text-primary) !important;
+  border-color: var(--nova-input-border) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) input::placeholder,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) textarea::placeholder {
   color: var(--nova-text-placeholder) !important;
 }
 
-/* ── Wearable cards ──────────────────────────────────────────────── */
-.dark .bg-\[\#faf8ff\].border-\[\#b2e7df\] {
+/* ── Wearable cards ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#faf8ff\].border-\[\#b2e7df\] {
   background-color: var(--nova-wearable-active-bg) !important;
   border-color: var(--nova-wearable-active-border) !important;
 }
-.dark .bg-\[\#f8f9fc\].border-\[\#e2e7ff\] {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#f8f9fc\].border-\[\#e2e7ff\] {
   background-color: var(--nova-wearable-inactive-bg) !important;
   border-color: var(--nova-wearable-inactive-border) !important;
 }
 
-/* ── Login screen card ───────────────────────────────────────────── */
-.dark .bg-white\/95.backdrop-blur-xl.rounded-3xl {
+/* ── Login screen card ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white\/95.backdrop-blur-xl.rounded-3xl {
   background-color: var(--nova-surface-solid) !important;
   border-color: var(--nova-border) !important;
 }
-.dark .bg-white.hover\:bg-\[\#faf8ff\] {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white.hover\:bg-\[\#faf8ff\] {
   background-color: var(--nova-surface-solid) !important;
   border-color: var(--nova-border) !important;
   color: var(--nova-text-primary) !important;
 }
 
-/* ── Login screen Google button text ────────────────────────────── */
-.dark .text-\[\#1e293b\] { color: var(--nova-text-primary) !important; }
-.dark .text-\[\#0f172a\] { color: var(--nova-text-primary) !important; }
-
-/* ── NovaAI Screen ─────────────────────────────────────────────── */
-.dark .bg-\[\#F7F9F8\].relative.overflow-hidden {
+/* ── NovaAI Screen ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#F7F9F8\].relative.overflow-hidden {
   background-color: var(--nova-bg) !important;
 }
-.dark .bg-white\/80.backdrop-blur-sm {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white\/80.backdrop-blur-sm {
   background-color: var(--nova-surface-elevated) !important;
   border-color: var(--nova-border) !important;
 }
-/* AI page header */
-.dark .border-\[\#E5EBE9\].bg-white\/80 {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .border-\[\#E5EBE9\].bg-white\/80 {
   background-color: rgba(20,30,28,0.95) !important;
   border-color: var(--nova-border) !important;
 }
-/* AI messages — NOVA message bubbles */
-.dark .bg-white.border.border-\[\#e2e7ff\]\/80 {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white.border.border-\[\#e2e7ff\]\/80 {
   background-color: var(--nova-surface-solid) !important;
   border-color: var(--nova-border) !important;
 }
-/* AI user message bubble keeps brand teal */
-.dark .bg-\[\#00685F\].text-white { background-color: var(--nova-brand) !important; }
-
-/* AI composer box */
-.dark .bg-white.border.border-\[\#dae2fd\].rounded-2xl {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#00685F\].text-white {
+  background-color: var(--nova-brand) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white.border.border-\[\#dae2fd\].rounded-2xl {
   background-color: var(--nova-surface-solid) !important;
   border-color: var(--nova-input-border) !important;
 }
-/* Fade gradient above composer */
-.dark [style*="linear-gradient(to bottom, transparent, #F7F9F8)"] {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) [style*="linear-gradient(to bottom, transparent, #F7F9F8)"] {
   background: linear-gradient(to bottom, transparent, var(--nova-bg)) !important;
 }
-/* Prompt chips */
-.dark .bg-white.border.border-\[\#E5EBE9\] {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-white.border.border-\[\#E5EBE9\] {
   background-color: var(--nova-surface-secondary) !important;
   border-color: var(--nova-border) !important;
   color: var(--nova-text-secondary) !important;
 }
-/* AI ready badge */
-.dark .bg-\[\#DDF4EF\].border.border-\[\#00685F\]\/20 {
-  background-color: var(--nova-brand-light) !important;
-  border-color: var(--nova-brand-border) !important;
-}
-/* Disabled send button */
-.dark .disabled\:bg-\[\#dae2fd\]:disabled {
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .disabled\:bg-\[\#dae2fd\]:disabled {
   background-color: var(--nova-surface-secondary) !important;
 }
 
-/* ── CheckIn Screen ─────────────────────────────────────────────── */
-.dark .bg-\[\#17221f\]  { background-color: var(--nova-surface-secondary) !important; }
-.dark .bg-\[\#111a18\]  { background-color: var(--nova-surface-solid) !important; }
+/* ── CheckIn Screen ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#17221f\] { background-color: var(--nova-surface-secondary) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#111a18\] { background-color: var(--nova-surface-solid) !important; }
 
-/* ── Settings Screen cards ──────────────────────────────────────── */
-.dark .rounded-3xl.bg-white { background-color: var(--nova-surface-solid) !important; }
+/* ── Settings Screen cards ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .rounded-3xl.bg-white { background-color: var(--nova-surface-solid) !important; }
 
-/* ── Selected / Active state chips ──────────────────────────────── */
-.dark .bg-\[\#00685f\]\/12 { background-color: rgba(43,183,167,0.12) !important; }
-.dark .bg-\[\#00685f\]\/8  { background-color: rgba(43,183,167,0.08) !important; }
+/* ── Selected / Active state chips ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#00685f\]\/12 { background-color: rgba(43,183,167,0.12) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#00685f\]\/8  { background-color: rgba(43,183,167,0.08) !important; }
 
-/* ── Focus screen ambient background ────────────────────────────── */
-.dark .bg-\[\#e2f5f1\].rounded-full { background-color: var(--nova-timer-ring) !important; }
+/* ── Focus screen ambient background ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#e2f5f1\].rounded-full { background-color: var(--nova-timer-ring) !important; }
 
-/* ── Toggle / slider track colors ───────────────────────────────── */
-.dark .bg-slate-300 { background-color: #2a3a37 !important; }
+/* ── Toggle / slider track colors ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-slate-300 { background-color: #2a3a37 !important; }
 
-/* ── Shadows ─────────────────────────────────────────────────────── */
-.dark .shadow-xl  { box-shadow: 0 16px 48px rgba(0,0,0,0.4) !important; }
-.dark .shadow-2xl { box-shadow: 0 24px 64px rgba(0,0,0,0.5) !important; }
-.dark .shadow-sm  { box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important; }
+/* ── Shadows ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .shadow-xl  { box-shadow: 0 16px 48px rgba(0,0,0,0.4) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .shadow-2xl { box-shadow: 0 24px 64px rgba(0,0,0,0.5) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .shadow-sm  { box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important; }
 
-/* ── History Screen ─────────────────────────────────────────────── */
-.dark .bg-\[\#faf9ff\]   { background-color: var(--nova-bg) !important; }
-.dark .bg-\[\#f9f9fb\]   { background-color: var(--nova-surface-secondary) !important; }
-.dark .from-\[\#faf8ff\] { --tw-gradient-from: var(--nova-bg) !important; }
-
-/* ── Analytics / Chart containers ───────────────────────────────── */
-.dark .recharts-cartesian-grid line { stroke: var(--nova-chart-grid) !important; }
-.dark .recharts-text { fill: var(--nova-chart-text) !important; }
-.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+/* ── Analytics / Chart containers ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .recharts-cartesian-grid line { stroke: var(--nova-chart-grid) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .recharts-text { fill: var(--nova-chart-text) !important; }
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .recharts-tooltip-wrapper .recharts-default-tooltip {
   background-color: var(--nova-chart-tooltip-bg) !important;
   border-color: var(--nova-border) !important;
   color: var(--nova-text-primary) !important;
 }
 
-/* ── Landing page overlays ───────────────────────────────────────── */
-.dark .bg-white { background-color: var(--nova-landing-surface) !important; }
+/* ── SVG Charts / Lines in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) svg line[stroke="#f0f3fd"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) svg line[stroke="#dae2fd"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) svg line[stroke="#e2e7ff"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) svg circle[stroke="#f0f3fd"] {
+  stroke: rgba(255, 255, 255, 0.08) !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) svg circle[fill="#ffffff"] {
+  fill: #131b2e !important;
+}
 
-/* ── Override for inline styles with hardcoded colors ───────────── */
-.dark [style*="background: linear-gradient"] {
-  /* Gradient backgrounds adapt naturally via CSS variable tokens */
+/* ── Segmented Controls, Tab Bars & Filter Pill Tracks in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eaedff\]\/60,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eaedff\]\/70,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eaedff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) [role="tablist"] {
+  background-color: rgba(20, 28, 48, 0.85) !important;
+  border-color: rgba(45, 58, 88, 0.8) !important;
+}
+
+/* ── Inactive Button / Pill Text & Contrast in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eaedff\]\/60 button:not([class*="bg-\[#00685f\]"]):not([class*="bg-white"]):not([class*="bg-\[#7C5CFC\]"]):not([class*="bg-\[#712ae2\]"]),
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eaedff\]\/70 button:not([class*="bg-\[#00685f\]"]):not([class*="bg-white"]):not([class*="bg-\[#7C5CFC\]"]):not([class*="bg-\[#712ae2\]"]),
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button[aria-pressed="false"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button[aria-selected="false"],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.text-\[\#6d7a77\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.text-\[\#687573\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.text-\[\#3d4947\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.text-\[\#44474f\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.text-\[\#475569\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+/* ── Inactive Button Hover State in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eaedff\]\/60 button:not([class*="bg-\[#00685f\]"]):not([class*="bg-white"]):not([class*="bg-\[#7C5CFC\]"]):not([class*="bg-\[#712ae2\]"]):hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eaedff\]\/70 button:not([class*="bg-\[#00685f\]"]):not([class*="bg-white"]):not([class*="bg-\[#7C5CFC\]"]):not([class*="bg-\[#712ae2\]"]):hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.hover\:text-\[\#131b2e\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.hover\:text-\[\#0D2422\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.hover\:text-\[\#0f172a\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.text-\[\#6d7a77\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.text-\[\#687573\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.text-\[\#3d4947\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) a.text-\[\#687573\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) a.text-\[\#6d7a77\]:hover {
+  color: #f1f5f9 !important;
+}
+
+/* ── Active Segmented Pill with White Background in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eaedff\]\/60 button.bg-white,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) .bg-\[\#eaedff\]\/70 button.bg-white,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button[aria-selected="true"].bg-white,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button[aria-pressed="true"].bg-white {
+  background-color: rgba(36, 49, 82, 0.95) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  border-color: rgba(0, 163, 148, 0.5) !important;
+}
+
+/* ── Inactive Preset and Chip Buttons in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.bg-\[\#faf8ff\].border-\[\#e2e7ff\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.bg-white.border-\[\#dae2fd\] {
+  background-color: rgba(26, 36, 62, 0.75) !important;
+  border-color: rgba(45, 58, 88, 0.85) !important;
+  color: #cbd5e1 !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.bg-\[\#faf8ff\].border-\[\#e2e7ff\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.bg-white.border-\[\#dae2fd\]:hover {
+  background-color: rgba(36, 49, 82, 0.9) !important;
+  border-color: rgba(0, 163, 148, 0.5) !important;
+  color: #f1f5f9 !important;
+}
+
+/* ── Inactive Circular and Modal Action Buttons in Dark Mode ── */
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.bg-\[\#f0f3fd\],
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.bg-\[\#faf8ff\] {
+  background-color: rgba(26, 36, 62, 0.75) !important;
+  border-color: rgba(45, 58, 88, 0.85) !important;
+  color: #cbd5e1 !important;
+}
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.bg-\[\#f0f3fd\]:hover,
+:is(.dark, html.dark, body.dark, [data-theme="dark"]) button.bg-\[\#faf8ff\]:hover {
+  background-color: rgba(36, 49, 82, 0.9) !important;
+  color: #f1f5f9 !important;
 }
 

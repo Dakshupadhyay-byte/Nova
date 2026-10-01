@@ -170,12 +170,12 @@ export const WeeklyVelocityChart: React.FC<WeeklyVelocityChartProps> = ({
       </div>
 
       {/* Day Labels Axis */}
-      <div className="flex justify-between px-6 text-[12px] font-medium text-[#6d7a77] mt-1 border-b border-[#e2e7ff]/60 pb-3">
+      <div className="flex justify-between px-6 text-[12px] font-medium text-[#6d7a77] dark:text-slate-400 mt-1 border-b border-[#e2e7ff]/60 dark:border-white/10 pb-3">
         {VELOCITY_DATA.map((d) => (
           <span
             key={d.day}
             className={`${
-              d.day === 'Today' ? 'font-bold text-[#00685f]' : 'hover:text-[#131b2e]'
+              d.day === 'Today' ? 'font-bold text-[#00685f] dark:text-teal-300' : 'hover:text-[#131b2e] dark:hover:text-white'
             }`}
           >
             {d.day}
@@ -186,7 +186,7 @@ export const WeeklyVelocityChart: React.FC<WeeklyVelocityChartProps> = ({
       {/* Expand Timeline Bar */}
       <div
         onClick={onOpenTimelineModal}
-        className="mt-3.5 flex items-center justify-between text-[12px] text-[#3d4947] hover:text-[#00685f] hover:bg-[#f4f7ff] p-2.5 rounded-xl cursor-pointer transition-colors group"
+        className="mt-3.5 flex items-center justify-between text-[12px] text-[#3d4947] hover:text-[#00685f] hover:bg-[#f4f7ff] dark:text-slate-300 dark:hover:text-teal-300 dark:hover:bg-white/5 p-2.5 rounded-xl cursor-pointer transition-colors group"
       >
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-[#00685f] group-hover:scale-110 transition-transform" />
@@ -194,7 +194,7 @@ export const WeeklyVelocityChart: React.FC<WeeklyVelocityChartProps> = ({
             Expand 24-hr activity & focus timeline (Sleep, Energy, Focus)
           </span>
         </div>
-        <span className="text-[11px] text-[#6d7a77] group-hover:text-[#00685f] transition-colors">
+        <span className="text-[11px] text-[#6d7a77] group-hover:text-[#00685f] dark:text-slate-400 dark:group-hover:text-teal-300 transition-colors">
           Click anywhere to view
         </span>
       </div>

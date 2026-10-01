@@ -50,7 +50,7 @@ export const HealthSyncModal: React.FC<HealthSyncModalProps> = ({
 
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-full bg-[#f0f3fd] hover:bg-[#eaedff] flex items-center justify-center text-[#3d4947] transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-full bg-[#f0f3fd] hover:bg-[#eaedff] dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-[#3d4947] dark:text-slate-300 dark:hover:text-white transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-4 h-4" />
@@ -99,7 +99,7 @@ export const HealthSyncModal: React.FC<HealthSyncModalProps> = ({
               <div className="mt-4 flex items-center justify-between">
                 <button
                   onClick={onClose}
-                  className="px-3.5 py-2 text-[12.5px] font-medium text-[#687573] hover:text-[#131b2e] transition-colors cursor-pointer"
+                  className="px-3.5 py-2 text-[12.5px] font-medium text-[#687573] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -137,7 +137,7 @@ export const HealthSyncModal: React.FC<HealthSyncModalProps> = ({
               <div className="mt-4 flex items-center justify-between">
                 <button
                   onClick={onDisconnect}
-                  className="px-3 py-1.5 text-[12px] font-semibold text-[#687573] hover:text-[#b91c1c] transition-colors cursor-pointer rounded-lg hover:bg-red-50"
+                  className="px-3 py-1.5 text-[12px] font-semibold text-[#687573] hover:text-[#b91c1c] transition-colors cursor-pointer rounded-lg hover:bg-red-50 dark:text-slate-300 dark:hover:text-red-400"
                 >
                   Disconnect Device
                 </button>
@@ -165,7 +165,7 @@ export const HealthSyncModal: React.FC<HealthSyncModalProps> = ({
               <div className="mt-4 flex items-center justify-between">
                 <button
                   onClick={onClose}
-                  className="px-3 py-1.5 text-[12.5px] font-medium text-[#687573] hover:text-[#131b2e] cursor-pointer"
+                  className="px-3 py-1.5 text-[12.5px] font-medium text-[#687573] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white cursor-pointer"
                 >
                   Close
                 </button>

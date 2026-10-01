@@ -191,7 +191,7 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
               </div>
               <button
                 onClick={() => setSelectedBlock(null)}
-                className="text-[#6d7a77] hover:text-[#131b2e] p-1 text-sm font-semibold"
+                className="text-[#6d7a77] hover:text-[#131b2e] dark:text-slate-400 dark:hover:text-white p-1 text-sm font-semibold"
               >
                 ✕
               </button>

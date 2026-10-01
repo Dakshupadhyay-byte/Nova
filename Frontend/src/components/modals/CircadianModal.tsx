@@ -68,22 +68,22 @@ export const CircadianModal: React.FC<CircadianModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#f0f3fd] hover:bg-[#eaedff] flex items-center justify-center text-[#3d4947] transition-colors"
+            className="w-8 h-8 rounded-full bg-[#f0f3fd] hover:bg-[#eaedff] dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-[#3d4947] dark:text-slate-300 dark:hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1.5 mt-4 p-1 bg-[#eaedff]/60 rounded-xl w-fit">
+        <div className="flex items-center gap-1.5 mt-4 p-1 bg-[#eaedff]/60 dark:bg-white/5 rounded-xl w-fit">
           {(['all', 'focus', 'workout', 'sleep', 'nutrition'] as const).map((cat) => (
             <button
               key={cat}
               onClick={() => setFilter(cat)}
               className={`px-3 py-1 rounded-lg text-[12px] font-semibold transition-all capitalize ${
                 filter === cat
-                  ? 'bg-white text-[#131b2e] shadow-2xs'
-                  : 'text-[#6d7a77] hover:text-[#131b2e]'
+                  ? 'bg-white text-[#131b2e] shadow-2xs dark:bg-slate-800 dark:text-white'
+                  : 'text-[#6d7a77] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white'
               }`}
             >
               {cat}

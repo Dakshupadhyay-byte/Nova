@@ -318,7 +318,7 @@ const SuggestedPrompt: React.FC<SuggestedPromptProps> = ({ text, onClick, disabl
   <button
     onClick={() => onClick(text)}
     disabled={disabled}
-    className="text-left px-3.5 py-2 rounded-xl bg-white border border-[#dae2fd] text-[13px] text-[#3d4947] hover:bg-[#f0f3fd] hover:border-[#7C5CFC]/40 hover:text-[#7C5CFC] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+    className="text-left px-3.5 py-2 rounded-xl bg-white border border-[#dae2fd] text-[13px] text-[#3d4947] hover:bg-[#f0f3fd] hover:border-[#7C5CFC]/40 hover:text-[#7C5CFC] dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:text-purple-300 dark:hover:bg-purple-950/30 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
   >
     {text}
   </button>

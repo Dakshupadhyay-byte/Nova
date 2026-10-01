@@ -170,7 +170,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
       <div className="flex items-center justify-between mb-8">
         <button
           onClick={handleExitFocusMode}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#dae2fd] text-[#3d4947] hover:text-[#131b2e] hover:bg-[#f0f3fd] transition-colors text-[13px] font-medium cursor-pointer"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#dae2fd] text-[#3d4947] hover:text-[#131b2e] hover:bg-[#f0f3fd] dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10 transition-colors text-[13px] font-medium cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Exit Focus Mode</span>
@@ -238,7 +238,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
                 className={`px-3.5 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
                   totalSeconds === mins * 60
                     ? 'bg-[#00685f] text-white shadow-2xs'
-                    : 'text-[#3d4947] hover:text-[#131b2e]'
+                    : 'text-[#3d4947] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white'
                 }`}
               >
                 {mins}m
@@ -260,7 +260,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
           <button
             onClick={handleReset}
             title="Reset Timer"
-            className="w-12 h-12 rounded-2xl bg-[#faf8ff] hover:bg-[#f0f3fd] border border-[#dae2fd] text-[#3d4947] hover:text-[#131b2e] flex items-center justify-center transition-colors cursor-pointer"
+            className="w-12 h-12 rounded-2xl bg-[#faf8ff] hover:bg-[#f0f3fd] border border-[#dae2fd] text-[#3d4947] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -283,7 +283,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
                   isPlayingAudio
                     ? 'bg-[#00685f] text-white'
-                    : 'bg-white border border-[#dae2fd] text-[#6d7a77] hover:text-[#131b2e]'
+                    : 'bg-white border border-[#dae2fd] text-[#6d7a77] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white dark:bg-white/5 dark:border-white/10'
                 }`}
               >
                 <Headphones className="w-4 h-4" />

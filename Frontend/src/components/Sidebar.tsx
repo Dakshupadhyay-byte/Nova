@@ -22,7 +22,7 @@ interface SidebarProps {
 interface NavItemConfig {
   id: NavTab;
   label: string;
-  icon?: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   isNovaAI?: boolean;
 }
 

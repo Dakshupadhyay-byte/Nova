@@ -225,7 +225,7 @@ export const SimulatorScreen: React.FC<SimulatorScreenProps> = ({ onBack }) => {
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-[13px] font-semibold text-[#6d7a77] hover:text-[#131b2e] transition-colors"
+          className="flex items-center gap-1.5 text-[13px] font-semibold text-[#6d7a77] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white transition-colors"
           aria-label="Back to Overview"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -263,7 +263,7 @@ export const SimulatorScreen: React.FC<SimulatorScreenProps> = ({ onBack }) => {
               className={`px-3.5 py-1.5 rounded-xl text-[13px] font-bold border transition-all duration-100 ${
                 sleepValue === preset
                   ? 'bg-[#7C5CFC] text-white border-[#7C5CFC] shadow-sm'
-                  : 'bg-[#faf8ff] text-[#3d4947] border-[#e2e7ff] hover:border-[#7C5CFC]/40 hover:bg-[#f5f0ff]'
+                  : 'bg-[#faf8ff] text-[#3d4947] border-[#e2e7ff] hover:border-[#7C5CFC]/40 hover:bg-[#f5f0ff] dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:text-white dark:hover:bg-purple-900/30'
               }`}
               aria-pressed={sleepValue === preset}
             >

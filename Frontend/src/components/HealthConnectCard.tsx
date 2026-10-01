@@ -222,7 +222,7 @@ export const HealthConnectCard: React.FC = () => {
             <div className="mt-3 flex items-center justify-between text-[12px] px-1">
               <button
                 onClick={handleCancelPairing}
-                className="text-[#687573] hover:text-[#131b2e] font-medium transition-colors cursor-pointer"
+                className="text-[#687573] hover:text-[#131b2e] dark:text-slate-300 dark:hover:text-white font-medium transition-colors cursor-pointer"
               >
                 Cancel
               </button>
