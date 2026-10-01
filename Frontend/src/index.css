@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @layer base {
   :root {
@@ -361,7 +361,7 @@ img, video, canvas, svg, [data-no-transition],
 
 /* ─── Inputs ─── */
 .nova-input {
-  width: 100%; padding: 0.625rem 1rem; font-size: 0.875rem;
+  width: 100%; padding: 0.625rem 3rem; font-size: 0.875rem;
   color: var(--nova-text-primary);
   background-color: var(--nova-input-bg) !important;
   border: 1px solid var(--nova-input-border);
