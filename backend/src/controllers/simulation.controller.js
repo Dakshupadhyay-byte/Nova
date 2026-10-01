@@ -127,9 +127,13 @@ const buildGeminiInsight = async (result, targetSleep) => {
     `Do NOT invent any numbers or trends beyond what is in the statistics above.`;
 
   try {
-    // We pass an empty context object because the stats are in the prompt itself
-    const text = await geminiService.sendMessage(prompt, {});
-    return text;
+    // We pass an empty context object because the stats are in the prompt itself.
+    // sendMessage returns { reply, action } — we only need the plain-text reply.
+    const result = await geminiService.sendMessage(prompt, {});
+    const insightText = typeof result?.reply === 'string' && result.reply.trim() !== ''
+      ? result.reply.trim()
+      : null;
+    return insightText;
   } catch (err) {
     // Log and fall back — never surface Gemini errors to the client
     console.warn('[SIMULATION] Gemini insight unavailable, using fallback. Code:', err.code || err.message);
